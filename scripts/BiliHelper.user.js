@@ -23,7 +23,7 @@ const MENU_VALUE_PREFIX = 'bool_menu_value_for_';
 const MENU_ID_PREFIX = 'bool_menu_id_for_';
 const PROCESSED_ATTR = 'x-bili-helper-processed';
 
-function refresh_menus(first_run = true) {
+function refresh_menus() {
     // TODO: 现有菜单点击开关的体验不是很好，切换成点击菜单时弹出对话框选择开关
     const pages = [ACTIVITY_NAME, HOME_NAME];
     for (const page of pages) {
@@ -36,12 +36,19 @@ function refresh_menus(first_run = true) {
         }
 
         const enable = GM_getValue(menu_value_key, true);
+        const has_set = GM_getValue(menu_id_key, false);
+        if (!has_set) {
+            // 第一次设置默认值
+            GM_setValue(menu_value_key, enable);
+        }
+
         const menu_icon = enable ? '✅' : '❌';
         const menu_name = `${menu_icon} ${page} 点击切换`;
         const new_menu_id = GM_registerMenuCommand(menu_name, () => {
             GM_setValue(menu_value_key, !enable);
-            refresh_menus(false);
+            refresh_menus();
         });
+
         GM_setValue(menu_id_key, new_menu_id);
     }
 }
@@ -59,7 +66,7 @@ function on_activity_page() {
 }
 
 function on_home_page() {
-    const enable = GM_getValue(MENU_VALUE_PREFIX + HOME_NAME, false);
+    const enable = GM_getValue(MENU_VALUE_PREFIX + HOME_NAME, true);
     if (!enable) {
         return;
     }
@@ -80,7 +87,11 @@ function set_background_click(old_element) {
         const tmp_ele = document.createElement('a');
         tmp_ele.href = new_element.href;
         tmp_ele.target = '_blank';
-        tmp_ele.dispatchEvent(new MouseEvent('click', {ctrlKey: true}));
+        const mouse_event = new MouseEvent('click', {
+            ctrlKey: true, // for Windows and Linux
+            metaKey: true, // for Mac OS
+        });
+        tmp_ele.dispatchEvent(new MouseEvent('click', mouse_event));
     });
     new_element.setAttribute(PROCESSED_ATTR, 'true');
 }
