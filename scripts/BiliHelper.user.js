@@ -53,28 +53,21 @@ function refresh_menus() {
     }
 }
 
-function on_activity_page() {
-    const enable = GM_getValue(MENU_VALUE_PREFIX + ACTIVITY_NAME, true);
-    if (!enable) {
-        return;
-    }
-    const elements = document.querySelectorAll(`a.bili-dyn-card-video[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`);
-    elements.forEach(set_background_click);
-    if (elements.length > 0) {
-        console.log(`[BiliHelper] ${elements.length} elements processed.`);
-    }
-}
 
-function on_home_page() {
-    const enable = GM_getValue(MENU_VALUE_PREFIX + HOME_NAME, true);
-    if (!enable) {
-        return;
-    }
-    const elements = document.querySelectorAll(`div.bili-video-card a[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`);
-    elements.forEach(set_background_click);
-    if (elements.length > 0) {
-        console.log(`[BiliHelper] ${elements.length} elements processed.`);
-    }
+function on_page(page_name, selector) {
+    return function () {
+        const enable = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
+        if (!enable) {
+            return;
+        }
+        const elements = document.querySelectorAll(selector);
+        for (const element of elements) {
+            set_background_click(element, page_name)
+        }
+        if (elements.length > 0) {
+            console.log(`[BiliHelper] ${elements.length} elements processed.`);
+        }
+    };
 }
 
 function set_background_click(old_element, page_name) {
@@ -89,10 +82,10 @@ function set_background_click(old_element, page_name) {
         tmp_ele.target = '_blank';
 
         // 为了保证切换开关后对当前页面立即生效，这里直接读取开关值
-        const background = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
+        const enable = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
         const mouse_event = new MouseEvent('click', {
-            ctrlKey: background, // for Windows and Linux
-            metaKey: background, // for Mac OS
+            ctrlKey: enable, // for Windows and Linux
+            metaKey: enable, // for Mac OS
         });
         tmp_ele.dispatchEvent(new MouseEvent('click', mouse_event));
     });
@@ -102,10 +95,10 @@ function set_background_click(old_element, page_name) {
 function main() {
     const url = new URL(window.location.href);
     if (url.host === 't.bilibili.com') {
-        setInterval(on_activity_page, 500);
+        setInterval(on_page(ACTIVITY_NAME, `a.bili-dyn-card-video[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`), 500);
     }
     if (url.host === 'www.bilibili.com' && url.pathname === '/') {
-        setInterval(on_home_page, 500);
+        setInterval(on_page(HOME_NAME, `div.bili-video-card a[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`), 500);
     }
 }
 
