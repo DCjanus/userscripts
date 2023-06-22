@@ -65,8 +65,9 @@ class Page {
         }
         const url = new URL(window.location.href);
         if (!this.page_match(url)) {
-            return;
+            return
         }
+
         setInterval(this.on_page.bind(this), 1000);
     }
 
