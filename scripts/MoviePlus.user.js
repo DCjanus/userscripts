@@ -1,20 +1,20 @@
 // ==UserScript==
 // @name           MoviePlus
 // @namespace      https://github.com/DCjanus/userscripts
-// @description    在豆瓣电影页面右边增加若干按钮，一键搜索电影相关资源，支持 BTDigg/低端影视/茶杯狐/TorrentGalaxy/WebHD/SubHD/字幕库/伪射手。Fork 自 https://github.com/94leon/movie.plus
+// @description    在豆瓣电影页面右边增加若干按钮，一键搜索电影相关资源。Fork 自 https://github.com/94leon/movie.plus
 // @author         DCjanus
 // @match          http*://movie.douban.com/subject/*/
 // @match          http*://movie.douban.com/subject/*/?from=*
-// @exclude-match  http*://movie.douban.com/subject/*/*/
+// @exclude        http*://movie.douban.com/subject/*/*/
 // @downloadURL    https://github.com/DCjanus/userscripts/master/scripts/MoviePlus.user.js
 // @updateURL      https://github.com/DCjanus/userscripts/master/scripts/MoviePlus.user.js
-// @version        20230622
+// @version        20230623
 // @license        MIT
 // ==/UserScript==
 'use strict';
 
 const myScriptStyle = document.createElement("style");
-myScriptStyle.innerHTML = "@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;padding: 0 8px;text-align: center;width: 80px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}";
+myScriptStyle.innerHTML = "@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;padding: 0 8px;text-align: center;width: 65px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}";
 document.getElementsByTagName("head")[0].appendChild(myScriptStyle);
 const aside_html = '<div class=c-aside > <h2><i class="">四字标题</i>· · · · · · </h2> <div class=c-aside-body  style="padding: 0 12px;"> <ul class=bs > </ul> </div> </div>';
 
@@ -62,24 +62,21 @@ function parseURL(url) {
 
 function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     let name, sites;
-    // title = encodeURI(title.trim());
     title = title.trim();
     sites = {
-        'TorrentGalaxy': 'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + IMDb_ID,
-        'BTDigg.EN': 'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
-        'BTDigg.中': 'https://www.btdig.com/search?q=' + title_cn,
-        // '低端影视': 'https://www.google.com/search?q=site%3Addys.tv ' + title + ' ' + year,
-        '低端影视': 'https://ddys.tv/?s=' + douban_ID,
+        'Galaxy': 'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + IMDb_ID,
+        'BTDigg EN': 'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
+        'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
+        "EXT.TO": "https://ext.to/search/?q=" + title,
         '茶杯狐': 'https://cupfox.app/search?key=' + title_cn,
-        'WebHD': 'https://webhd.cc/d/' + douban_ID,
     }
 
-
-    if (is_series(title))
-        sites['BTDigg.EN'] = 'https://www.btdig.com/search?q=' + title + ' 1080p'
-    if (not_series_01(title))
-        sites['TorrentGalaxy'] = 'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + title
-
+    if (is_series(title)) {
+        sites['BTDigg.EN'] = 'https://www.btdig.com/search?q=' + title + ' 1080p';
+    }
+    if (not_series_01(title)) {
+        sites['TorrentGalaxy'] = 'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + title;
+    }
 
     for (name in sites) {
         let link = parse_sites(name, sites)
@@ -136,8 +133,7 @@ function not_series_01(name) {
 }
 
 function format_series_name(name) {
-    if (!/\sSeason\s\d+$/.test(name))
-        return name
+    if (!/\sSeason\s\d+$/.test(name)) return name
     let name_arr = name.split("Season")
     let series_id = name_arr.slice(-1)[0].trim().padStart(2, '0')
     return name_arr[0] + "S" + series_id
@@ -184,14 +180,12 @@ function main() {
         }
 
         //检查名称——————————————
-        // console.log(title_all.length, (title_en + title_cn).length)
         if ((title_all.length !== (title_en + title_cn).length)) {
 
             title_cn = ""
             let title_array = title_all.split(" ");
             title_array.some(item => {
-                if (!cn_total_reg.test(item))
-                    return true
+                if (!cn_total_reg.test(item)) return true
                 title_cn += item + " "
             })
 
@@ -200,13 +194,10 @@ function main() {
 
         //解析info内容
         let info_text = $('#info')[0].innerText, info_map = {}
-        // console.log(info_text);
         info_text.split("\n").forEach(line => {
             let index = line.indexOf(":")
-            if (index > 0)
-                info_map[line.slice(0, index).trim()] = line.slice(index + 1).trim()
+            if (index > 0) info_map[line.slice(0, index).trim()] = line.slice(index + 1).trim()
         })
-        // console.log(info_map);
 
         //匹配备用英文名——————————————
         title_en_sub = info_map["又名"];
@@ -217,23 +208,12 @@ function main() {
         bt_title = bt_title.replaceAll(symbol_delete_reg, ' ').replace('\'', '').replace(/\s+/g, ' ').trim();
         bt_title = format_series_name(bt_title)
 
-        // title_en = title_en ? title_en[0] : '';
-
-
-        // console.log('title_all:' + title_all);
-        // console.log('title_en:' + title_en);
-        // console.log('title_cn:' + title_cn);
-        // console.log('title_en_sub:' + title_en_sub);
-        // console.log('bt_title:' + bt_title);
-
-        // console.log(" h1_span[1].textContent", h1_span[1].textContent);
         year = h1_span[1].textContent.substr(1, 4);
 
         douban_ID = location.href.split('\/')[4] || title_cn;
 
         IMDb_ID = info_map["IMDb"];
         IMDb_ID = IMDb_ID ? IMDb_ID : title_cn;
-        // console.log('IMDb_ID', IMDb_ID);
 
         update_bt_site(bt_title, year, douban_ID, IMDb_ID, title_cn);
         update_sub_site(title_cn, douban_ID, IMDb_ID);
