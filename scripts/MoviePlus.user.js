@@ -3,9 +3,10 @@
 // @namespace      https://github.com/DCjanus/userscripts
 // @description    在豆瓣电影页面右边增加若干按钮，一键搜索电影相关资源。Fork 自 https://github.com/94leon/movie.plus
 // @author         DCjanus
-// @match          http*://movie.douban.com/subject/*/
-// @match          http*://movie.douban.com/subject/*/?from=*
-// @exclude        http*://movie.douban.com/subject/*/*/
+// @match          https://movie.douban.com/subject/*/
+// @match          https://movie.douban.com/subject/*/?from=*
+// @exclude        https://movie.douban.com/subject/*/*/
+// @icon           https://img1.doubanio.com/favicon.ico
 // @version        20230623
 // @license        MIT
 // ==/UserScript==
