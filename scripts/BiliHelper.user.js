@@ -8,7 +8,7 @@
 // @icon         https://t.bilibili.com/favicon.ico
 // @updateURL    https://github.com/DCjanus/userscripts/raw/master/scripts/BiliHelper.user.js
 // @downloadURL  https://github.com/DCjanus/userscripts/raw/master/scripts/BiliHelper.user.js
-// @version      20230622
+// @version      20230623
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
