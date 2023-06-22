@@ -2,7 +2,7 @@
 
 DCjanus 自用的一些 Userscript，在满足自己需求的基础上，尽可能通用化。
 
-**GreasyFork 的反馈功能不太好用，有问题可以开 [GitHub issue](https://github.com/DCjanus/userscripts/issues)**
+**GreasyFork 的反馈功能不太好用，可以到 [GitHub issue](https://github.com/DCjanus/userscripts/issues) 反馈**
 
 # 脚本列表
 
@@ -17,3 +17,7 @@ BiliBili 增强脚本，包含以下功能：
 豆瓣电影增强脚本，包含以下功能：
 
 - 豆瓣电影页面右侧添加若干快速入口，一键搜索相关相关资源
+
+# 其他
+
++ 项目主页：<https://github.com/DCjanus/userscripts>
