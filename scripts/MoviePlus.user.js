@@ -6,8 +6,6 @@
 // @match          http*://movie.douban.com/subject/*/
 // @match          http*://movie.douban.com/subject/*/?from=*
 // @exclude        http*://movie.douban.com/subject/*/*/
-// @downloadURL    https://github.com/DCjanus/userscripts/master/scripts/MoviePlus.user.js
-// @updateURL      https://github.com/DCjanus/userscripts/master/scripts/MoviePlus.user.js
 // @version        20230623
 // @license        MIT
 // ==/UserScript==

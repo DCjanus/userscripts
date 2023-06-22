@@ -2,15 +2,15 @@
 
 DCjanus 自用的一些 Userscript，在满足自己需求的基础上，尽可能通用化。
 
+由于我只是用 Tampermonkey，所以其他脚本管理器下的表现不保证。
+
 **GreasyFork 的反馈功能不太好用，可以到 [GitHub issue](https://github.com/DCjanus/userscripts/issues) 反馈**
 
 # 脚本列表
 
-## [BiliHelper](https://greasyfork.org/zh-CN/scripts/469242)
+## [BackgroundTab](https://greasyfork.org/zh-CN/scripts/469242)
 
-BiliBili 增强脚本，包含以下功能：
-
-+ 替换动态、首页中视频卡片打开方式为后台打开新标签页，避免打开视频时被强制切换到新标签页
+支持打开特定网站的链接到后台新标签页，不影响当前页面的浏览，目前支持 B 站首页和动态页的视频链接
 
 ## [MoviePlus](https://greasyfork.org/zh-CN/scripts/469243)
 

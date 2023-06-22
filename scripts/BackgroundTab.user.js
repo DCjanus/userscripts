@@ -1,13 +1,11 @@
 // ==UserScript==
-// @name         BiliHelper
+// @name         BackgroundTab
 // @namespace    https://github.com/dcjanus/userscripts
-// @description  B 站增强脚本，支持打开视频到后台新标签页，方便快速打开多个视频以预加载
+// @description  支持打开特定网站的链接到后台新标签页，不影响当前页面的浏览，目前支持 B 站首页和动态页的视频链接
 // @author       DCjanus
 // @match        https://t.bilibili.com/*
 // @match        https://www.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @updateURL    https://github.com/DCjanus/userscripts/raw/master/scripts/BiliHelper.user.js
-// @downloadURL  https://github.com/DCjanus/userscripts/raw/master/scripts/BiliHelper.user.js
 // @version      20230623
 // @license      MIT
 // @grant        GM_registerMenuCommand
@@ -17,11 +15,12 @@
 // ==/UserScript==
 'use strict';
 
-const ACTIVITY_NAME = '动态页';
-const HOME_NAME = '首页';
+const ACTIVITY_NAME = 'B 站动态';
+const HOME_NAME = 'B 站首页';
 const MENU_VALUE_PREFIX = 'bool_menu_value_for_';
 const MENU_ID_PREFIX = 'bool_menu_id_for_';
 const PROCESSED_ATTR = 'x-bili-helper-processed';
+const SCRIPT_NAME = GM_info.script.name;
 
 function refresh_menus() {
     // TODO: 现有菜单点击开关的体验不是很好，切换成点击菜单时弹出对话框选择开关
@@ -65,7 +64,7 @@ function on_page(page_name, selector) {
             set_background_click(element, page_name)
         }
         if (elements.length > 0) {
-            console.log(`[BiliHelper] ${elements.length} elements processed.`);
+            console.log(`[${SCRIPT_NAME}] ${elements.length} elements processed.`);
         }
     };
 }
@@ -106,5 +105,5 @@ try {
     refresh_menus();
     main();
 } catch (e) {
-    console.error(`[BiliHelper] ${e}`);
+    console.error(`[${SCRIPT_NAME}] ${e}`);
 }
