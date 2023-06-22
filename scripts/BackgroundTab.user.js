@@ -22,51 +22,102 @@ const MENU_ID_PREFIX = 'bool_menu_id_for_';
 const PROCESSED_ATTR = 'x-bili-helper-processed';
 const SCRIPT_NAME = GM_info.script.name;
 
-function refresh_menus() {
-    // TODO: 现有菜单点击开关的体验不是很好，切换成点击菜单时弹出对话框选择开关
-    const pages = [ACTIVITY_NAME, HOME_NAME];
-    for (const page of pages) {
-        const menu_id_key = MENU_ID_PREFIX + page;
-        const menu_value_key = MENU_VALUE_PREFIX + page;
+class Page {
+    constructor(object) {
+        this.name = object.name;
+        this.key = object.key;
+        this.selector = object.selector;
+        this.page_match = object.page_match;
+        this.default_enable = object.default_enable;
+    }
+
+    refresh_menu() {
+        const menu_id_key = MENU_ID_PREFIX + this.key;
+        const menu_value_key = MENU_VALUE_PREFIX + this.key;
 
         const menu_id = GM_getValue(menu_id_key, undefined);
         if (menu_id !== undefined) {
             GM_unregisterMenuCommand(menu_id);
         }
 
-        const enable = GM_getValue(menu_value_key, true);
-        const has_set = GM_getValue(menu_id_key, false);
-        if (!has_set) {
-            // 第一次设置默认值
-            GM_setValue(menu_value_key, enable);
+        const enabled = this.enabled();
+        if (!this.stored_enabled()) {
+            console.log(
+                `[${SCRIPT_NAME}] ${this.name} 未设置开关，使用默认值 ${enabled}`,
+            );
+            GM_setValue(menu_value_key, enabled);
         }
 
-        const menu_icon = enable ? '✅' : '❌';
-        const menu_name = `${menu_icon} ${page} 点击切换`;
+        const menu_icon = enabled ? '✅' : '❌';
+        const menu_name = `${menu_icon} ${this.name} 点击切换`;
         const new_menu_id = GM_registerMenuCommand(menu_name, () => {
-            GM_setValue(menu_value_key, !enable);
+            console.log(`[${SCRIPT_NAME}] ${this.name} 开关切换为 ${!enabled}`);
+            GM_setValue(menu_value_key, !enabled);
             refresh_menus();
         });
 
         GM_setValue(menu_id_key, new_menu_id);
     }
-}
 
-
-function on_page(page_name, selector) {
-    return function () {
-        const enable = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
-        if (!enable) {
+    attach() {
+        if (!this.enabled()) {
             return;
         }
-        const elements = document.querySelectorAll(selector);
+        const url = new URL(window.location.href);
+        if (!this.page_match(url)) {
+            return;
+        }
+        setInterval(this.on_page.bind(this), 1000);
+    }
+
+    on_page() {
+        if (!this.enabled()) {
+            return;
+        }
+
+        const elements = document.querySelectorAll(this.selector);
         for (const element of elements) {
-            set_background_click(element, page_name)
+            set_background_click(element, this.key);
         }
         if (elements.length > 0) {
-            console.log(`[${SCRIPT_NAME}] ${elements.length} elements processed.`);
+            console.log(`[${SCRIPT_NAME}] ${elements.length} 个链接已处理`);
         }
-    };
+    }
+
+    enabled() {
+        return GM_getValue(MENU_VALUE_PREFIX + this.key, this.default_enable);
+    }
+
+    stored_enabled() {
+        return (
+            GM_getValue(MENU_VALUE_PREFIX + this.key, undefined) !== undefined
+        );
+    }
+}
+
+const PAGES = [
+    new Page({
+        name: HOME_NAME,
+        key: 'bili_home',
+        selector: `div.bili-video-card a[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`,
+        page_match: (url) =>
+            url.host === 'www.bilibili.com' && url.pathname === '/',
+        default_enable: false,
+    }),
+    new Page({
+        name: ACTIVITY_NAME,
+        key: 'bili_activity',
+        selector: `a.bili-dyn-card-video[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`,
+        page_match: (url) => url.host === 't.bilibili.com',
+        default_enable: true,
+    }),
+];
+
+function refresh_menus() {
+    // TODO: 现有菜单点击开关的体验不是很好，切换成点击菜单时弹出对话框选择开关
+    for (const page of PAGES) {
+        page.refresh_menu();
+    }
 }
 
 function set_background_click(old_element, page_name) {
@@ -92,17 +143,16 @@ function set_background_click(old_element, page_name) {
 }
 
 function main() {
+    refresh_menus();
     const url = new URL(window.location.href);
-    if (url.host === 't.bilibili.com') {
-        setInterval(on_page(ACTIVITY_NAME, `a.bili-dyn-card-video[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`), 500);
-    }
-    if (url.host === 'www.bilibili.com' && url.pathname === '/') {
-        setInterval(on_page(HOME_NAME, `div.bili-video-card a[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`), 500);
+    for (const page of PAGES) {
+        if (page.page_match(url)) {
+            page.attach();
+        }
     }
 }
 
 try {
-    refresh_menus();
     main();
 } catch (e) {
     console.error(`[${SCRIPT_NAME}] ${e}`);

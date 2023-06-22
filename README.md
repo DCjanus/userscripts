@@ -18,8 +18,8 @@ DCjanus 自用的一些 Userscript，在满足自己需求的基础上，尽可�
 
 豆瓣电影增强脚本，包含以下功能：
 
-+ 豆瓣电影页面右侧添加若干快速入口，一键搜索相关相关资源
+-   豆瓣电影页面右侧添加若干快速入口，一键搜索相关相关资源
 
 # 其他我正在使用的脚本
 
-+ [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714-make-bilibili-great-again)
+-   [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714-make-bilibili-great-again)
