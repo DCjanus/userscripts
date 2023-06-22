@@ -77,7 +77,7 @@ function on_home_page() {
     }
 }
 
-function set_background_click(old_element) {
+function set_background_click(old_element, page_name) {
     const new_element = old_element.cloneNode(true);
     old_element.parentNode.replaceChild(new_element, old_element);
 
@@ -87,9 +87,12 @@ function set_background_click(old_element) {
         const tmp_ele = document.createElement('a');
         tmp_ele.href = new_element.href;
         tmp_ele.target = '_blank';
+
+        // 为了保证切换开关后对当前页面立即生效，这里直接读取开关值
+        const background = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
         const mouse_event = new MouseEvent('click', {
-            ctrlKey: true, // for Windows and Linux
-            metaKey: true, // for Mac OS
+            ctrlKey: background, // for Windows and Linux
+            metaKey: background, // for Mac OS
         });
         tmp_ele.dispatchEvent(new MouseEvent('click', mouse_event));
     });
