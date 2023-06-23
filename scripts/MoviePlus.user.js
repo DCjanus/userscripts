@@ -7,7 +7,7 @@
 // @match          https://movie.douban.com/subject/*/?from=*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20230623
+// @version        20230623.1
 // @license        MIT
 // ==/UserScript==
 'use strict';
@@ -76,6 +76,7 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
         'EXT.TO': 'https://ext.to/search/?q=' + title,
         茶杯狐: 'https://cupfox.app/search?key=' + title_cn,
+        动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
     };
 
     if (is_series(title)) {
