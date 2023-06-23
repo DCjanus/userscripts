@@ -6,8 +6,9 @@
 // @author       DCjanus
 // @match        https://t.bilibili.com/*
 // @match        https://www.bilibili.com/*
+// @match        https://space.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230623.2
+// @version      20230623.3
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -100,6 +101,13 @@ const PAGES = [
         selector: `a.bili-dyn-card-video[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`,
         page_match: (url) => url.host === 't.bilibili.com',
         default_enable: true,
+    }),
+    new Page({
+        name: 'B 站空间页',
+        key: 'bili_space',
+        selector: `a.cover[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`,
+        page_match: (url) => url.host === 'space.bilibili.com',
+        default_enable: false,
     }),
 ];
 
