@@ -52,9 +52,6 @@ class Page {
     }
 
     attach() {
-        if (!this.enabled()) {
-            return;
-        }
         const url = new URL(window.location.href);
         if (!this.page_match(url)) {
             return;
