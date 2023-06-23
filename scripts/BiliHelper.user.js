@@ -7,7 +7,7 @@
 // @match        https://t.bilibili.com/*
 // @match        https://www.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230623.1
+// @version      20230623.2
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -134,11 +134,19 @@ function set_background_click(old_element, page_name) {
         tmp_ele.href = new_element.href;
         tmp_ele.target = '_blank';
 
+        // 如果用户按下了 Ctrl 键或者 Command 键，默认行为是在后台标签页打开
+        let background_open = event.ctrlKey || event.metaKey;
+
         // 为了保证切换开关后对当前页面立即生效，这里直接读取开关值
         const enable = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
+        if (enable) {
+            // 如果当前开关打开，则反转默认行为
+            background_open = !background_open;
+        }
+
         const mouse_event = new MouseEvent('click', {
-            ctrlKey: enable, // for Windows and Linux
-            metaKey: enable, // for Mac OS
+            ctrlKey: background_open, // for Windows and Linux
+            metaKey: background_open, // for Mac OS
         });
         tmp_ele.dispatchEvent(new MouseEvent('click', mouse_event));
     });
