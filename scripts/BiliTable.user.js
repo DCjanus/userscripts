@@ -8,7 +8,7 @@
 // @match        https://www.bilibili.com/*
 // @match        https://space.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230623.3
+// @version      20230624
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -22,6 +22,7 @@
 const MENU_VALUE_PREFIX = 'bool_menu_value_for_';
 const MENU_ID_LIST_KEY = 'bool_menu_id_list';
 const PROCESSED_ATTR = 'x-bili-table-processed';
+const ACTIVE_CLASS = 'x-bili-table-active';
 const SCRIPT_NAME = GM_info.script.name;
 
 class Page {
@@ -57,8 +58,8 @@ class Page {
         if (!this.page_match(url)) {
             return;
         }
-
-        setInterval(this.on_page.bind(this), 1000);
+        this.on_page(); // 首次进入页面时执行一次
+        setInterval(this.on_page.bind(this), 500);
     }
 
     on_page() {
@@ -138,6 +139,11 @@ function set_background_click(old_element, page_name) {
     new_element.setAttribute('target', '_blank');
     new_element.addEventListener('click', (event) => {
         event.preventDefault();
+
+        // 增加点击后的交互效果，因为不够精通 CSS，所以靠简单的 定时器 + class 来实现
+        new_element.classList.add(ACTIVE_CLASS);
+        setTimeout(() => new_element.classList.remove(ACTIVE_CLASS), 50);
+
         const tmp_ele = document.createElement('a');
         tmp_ele.href = new_element.href;
         tmp_ele.target = '_blank';
@@ -176,7 +182,18 @@ function cleanAllMenu() {
     GM_deleteValue(MENU_ID_LIST_KEY);
 }
 
+function injectStyle() {
+    const style = document.createElement('style');
+    style.innerHTML = `
+        .${ACTIVE_CLASS} {
+            filter: brightness(95%);
+        }
+    `;
+    document.head.appendChild(style);
+}
+
 function main() {
+    injectStyle();
     refresh_menus();
     const url = new URL(window.location.href);
     for (const page of PAGES) {
