@@ -8,17 +8,22 @@
 
 # 脚本列表
 
-## [BiliHelper](https://greasyfork.org/zh-CN/scripts/469242)
-
-B 站增强脚本，包含以下功能：
-
--   打开视频到后台新标签页
-
-## [MoviePlus](https://greasyfork.org/zh-CN/scripts/469243) (Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus))
+## [MoviePlus](https://greasyfork.org/zh-CN/scripts/469243)（豆瓣电影增强）
 
 豆瓣电影增强脚本，包含以下功能：
 
 -   豆瓣电影页面右侧添加若干快速入口，一键搜索相关相关资源
+
+> Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
+
+## [BiliTable](https://greasyfork.org/zh-CN/scripts/469242)（B 站视频后台标签页打开）
+
+B 站动态视频卡片等地方自己劫持了点击事件，而不是使用 a 标签的默认行为，导致无法 Ctrl + 鼠标左键后台新标签页打开；想快速打开多个视频时，操作体验较差。
+
+点击脚本设置，可以分页面控制脚本开关，对应的行为：
+
+-   在开启脚本情况下，默认后台新标签页打开；按住 Ctrl 键后，前台新标签页打开。
+-   在关闭脚本情况下，默认前台新标签页打开；按住 Ctrl 键后，后台新标签页打开。
 
 # 其他我正在使用的脚本
 

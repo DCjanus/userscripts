@@ -1,8 +1,8 @@
 // ==UserScript==
-// @name         BiliHelper
-// @name:zh-CN   B 站增强脚本
+// @name         BiliTable
+// @name:zh-CN   B 站视频后台标签页打开
 // @namespace    https://github.com/dcjanus/userscripts
-// @description  B 站增强脚本，支持打开视频到后台新标签页
+// @description  支持打开 B 站视频到后台新标签页，而不是打断当前浏览的页面
 // @author       DCjanus
 // @match        https://t.bilibili.com/*
 // @match        https://www.bilibili.com/*
@@ -20,7 +20,7 @@
 
 const MENU_VALUE_PREFIX = 'bool_menu_value_for_';
 const MENU_ID_LIST_KEY = 'bool_menu_id_list';
-const PROCESSED_ATTR = 'x-bili-helper-processed';
+const PROCESSED_ATTR = 'x-bili-table-processed';
 const SCRIPT_NAME = GM_info.script.name;
 
 class Page {
