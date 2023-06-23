@@ -1,5 +1,6 @@
 // ==UserScript==
 // @name         BiliHelper
+// @name:zh-CN   B 站增强脚本
 // @namespace    https://github.com/dcjanus/userscripts
 // @description  B 站增强脚本，支持打开视频到后台新标签页
 // @author       DCjanus

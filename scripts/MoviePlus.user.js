@@ -1,5 +1,6 @@
 // ==UserScript==
 // @name           MoviePlus
+// @name:zh-CN     豆瓣电影增强
 // @namespace      https://github.com/DCjanus/userscripts
 // @description    在豆瓣电影页面右边增加若干按钮，一键搜索电影相关资源。Fork 自 https://github.com/94leon/movie.plus
 // @author         DCjanus
