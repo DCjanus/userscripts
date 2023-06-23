@@ -7,7 +7,7 @@
 // @match        https://t.bilibili.com/*
 // @match        https://www.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230623
+// @version      20230623.1
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -123,7 +123,11 @@ function refresh_menus() {
 }
 
 function set_background_click(old_element, page_name) {
-    const new_element = old_element.cloneNode(true);
+    const new_element = old_element.cloneNode(false);
+    for (const child of old_element.childNodes) {
+        // 避免影响子元素的事件绑定
+        new_element.appendChild(child);
+    }
     old_element.parentNode.replaceChild(new_element, old_element);
 
     new_element.setAttribute('target', '_blank');
