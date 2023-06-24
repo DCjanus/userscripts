@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name         BiliTable
+// @name         BiliTab
 // @name:zh-CN   B 站视频后台标签页打开
 // @namespace    https://github.com/dcjanus/userscripts
 // @description  支持打开 B 站视频到后台新标签页，而不是打断当前浏览的页面
@@ -21,8 +21,8 @@
 
 const MENU_VALUE_PREFIX = 'bool_menu_value_for_';
 const MENU_ID_LIST_KEY = 'bool_menu_id_list';
-const PROCESSED_ATTR = 'x-bili-table-processed';
-const ACTIVE_CLASS = 'x-bili-table-active';
+const PROCESSED_ATTR = 'x-bili-tab-processed';
+const ACTIVE_CLASS = 'x-bili-tab-active';
 const SCRIPT_NAME = GM_info.script.name;
 
 class Page {

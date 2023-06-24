@@ -16,7 +16,7 @@
 
 > Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
-## [BiliTable](https://greasyfork.org/zh-CN/scripts/469242)（B 站视频后台标签页打开）
+## [BiliTab](https://greasyfork.org/zh-CN/scripts/469242)（B 站视频后台标签页打开）
 
 B 站动态视频卡片等地方自己劫持了点击事件，而不是使用 a 标签的默认行为，导致无法 Ctrl + 鼠标左键后台新标签页打开；想快速打开多个视频时，操作体验较差。
 
