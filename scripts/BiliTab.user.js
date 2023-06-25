@@ -8,7 +8,7 @@
 // @match        https://www.bilibili.com/*
 // @match        https://space.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230624
+// @version      20230625
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -38,12 +38,6 @@ class Page {
         const menu_value_key = MENU_VALUE_PREFIX + this.key;
 
         const enabled = this.enabled();
-        if (!this.stored_enabled()) {
-            console.log(
-                `[${SCRIPT_NAME}] ${this.name} 未设置开关，使用默认值 ${enabled}`,
-            );
-            GM_setValue(menu_value_key, enabled);
-        }
 
         const menu_icon = enabled ? '✅' : '❌';
         const menu_name = `${menu_icon} ${this.name} 点击切换`;
@@ -63,13 +57,9 @@ class Page {
     }
 
     on_page() {
-        if (!this.enabled()) {
-            return;
-        }
-
         const elements = document.querySelectorAll(this.selector);
         for (const element of elements) {
-            set_background_click(element, this.key);
+            set_background_click(element, this.key, this.default_enable);
         }
         if (elements.length > 0) {
             console.log(`[${SCRIPT_NAME}] ${elements.length} 个链接已处理`);
@@ -78,12 +68,6 @@ class Page {
 
     enabled() {
         return GM_getValue(MENU_VALUE_PREFIX + this.key, this.default_enable);
-    }
-
-    stored_enabled() {
-        return (
-            GM_getValue(MENU_VALUE_PREFIX + this.key, undefined) !== undefined
-        );
     }
 }
 
@@ -128,7 +112,7 @@ function refresh_menus() {
     });
 }
 
-function set_background_click(old_element, page_name) {
+function set_background_click(old_element, page_name, default_enable) {
     const new_element = old_element.cloneNode(false);
     for (const child of old_element.childNodes) {
         // 避免影响子元素的事件绑定
@@ -152,7 +136,10 @@ function set_background_click(old_element, page_name) {
         let background_open = event.ctrlKey || event.metaKey;
 
         // 为了保证切换开关后对当前页面立即生效，这里直接读取开关值
-        const enable = GM_getValue(MENU_VALUE_PREFIX + page_name, true);
+        const enable = GM_getValue(
+            MENU_VALUE_PREFIX + page_name,
+            default_enable,
+        );
         if (enable) {
             // 如果当前开关打开，则反转默认行为
             background_open = !background_open;
