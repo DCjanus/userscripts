@@ -8,7 +8,7 @@
 // @match        https://www.bilibili.com/*
 // @match        https://space.bilibili.com/*
 // @icon         https://www.bilibili.com/favicon.ico
-// @version      20230628
+// @version      20230630
 // @license      MIT
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
@@ -92,15 +92,6 @@ const PAGES = [
         key: 'bili_space',
         selector: `a.cover[href*="//www.bilibili.com/video/"]:not([${PROCESSED_ATTR}="true"])`,
         page_match: (url) => url.host === 'space.bilibili.com',
-        default_enable: true,
-    }),
-    new Page({
-        name: 'B 站播放页推荐列表',
-        key: 'bili_video_recommend_list',
-        selector: `div.rec-list a[href*="/video/"]:not([${PROCESSED_ATTR}="true"])`,
-        page_match: (url) =>
-            url.host === 'www.bilibili.com' &&
-            url.pathname.startsWith('/video/'),
         default_enable: true,
     }),
 ];
