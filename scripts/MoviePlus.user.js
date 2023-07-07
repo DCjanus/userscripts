@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?from=*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20230623.1
+// @version        20230708
 // @license        MIT
 // ==/UserScript==
 'use strict';
@@ -81,11 +81,11 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     };
 
     if (is_series(title)) {
-        sites['BTDigg.EN'] =
+        sites['BTDigg EN'] =
             'https://www.btdig.com/search?q=' + title + ' 1080p';
     }
     if (not_series_01(title)) {
-        sites['TorrentGalaxy'] =
+        sites['Galaxy'] =
             'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + title;
     }
 
