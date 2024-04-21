@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20231202
+// @version        20240421
 // @license        MIT
 // ==/UserScript==
 'use strict';
@@ -101,7 +101,7 @@ function update_sub_site(title, douban_ID, IMDb_ID) {
 
     sites = {
         SubHD: 'https://subhd.tv/d/' + douban_ID,
-        字幕库: 'https://so.zimuku.org/search?q=' + IMDb_ID,
+        字幕库: 'https://srtku.com/search?q=' + IMDb_ID,
         伪射手: 'https://assrt.net/sub/?searchword=' + title,
     };
 
