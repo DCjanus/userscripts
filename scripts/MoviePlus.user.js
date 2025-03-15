@@ -76,7 +76,7 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
             'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
         'EXT.TO': 'https://ext.to/search/?q=' + title,
-        缘觉影视: 'https://www.yjys05.com/search/' + title_cn,
+        独播库: 'https://www.duboku.tv/vodsearch/-------------.html?wd=' + title_cn + '&submit=',
         动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
     };
 
