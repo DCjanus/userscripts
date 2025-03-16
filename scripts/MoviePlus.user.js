@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20240421
+// @version        20250316
 // @license        MIT
 // ==/UserScript==
 'use strict';
