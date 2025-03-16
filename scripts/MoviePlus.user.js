@@ -69,9 +69,7 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     let name, sites;
     title = title.trim();
     sites = {
-        Galaxy:
-            'https://tgx.rs/torrents.php?sort=size&order=desc&search=' +
-            IMDb_ID,
+        YIFY: 'https://yts.mx/browse-movies/' + title,
         'BTDigg EN':
             'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
@@ -83,10 +81,6 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     if (is_series(title)) {
         sites['BTDigg EN'] =
             'https://www.btdig.com/search?q=' + title + ' 1080p';
-    }
-    if (not_series_01(title)) {
-        sites['Galaxy'] =
-            'https://tgx.rs/torrents.php?sort=size&order=desc&search=' + title;
     }
 
     for (name in sites) {
