@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20250316
+// @version        20250804
 // @license        MIT
 // ==/UserScript==
 'use strict';
@@ -73,7 +73,7 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
         'BTDigg EN':
             'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
-        'EXT.TO': 'https://ext.to/search/?q=' + title,
+        'EXT.TO': 'https://ext.to/browse/?q=' + title,
         独播库: 'https://www.duboku.tv/vodsearch/-------------.html?wd=' + title_cn + '&submit=',
         动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
     };
