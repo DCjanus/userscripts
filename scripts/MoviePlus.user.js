@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://img1.doubanio.com/favicon.ico
-// @version        20250804
+// @version        20250817
 // @license        MIT
 // ==/UserScript==
 'use strict';
@@ -16,6 +16,7 @@
 const myScriptStyle = document.createElement('style');
 myScriptStyle.innerHTML =
     '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;padding: 0 8px;text-align: center;width: 65px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
+myScriptStyle.innerHTML += ' .db-series-link, .db-series-link:link, .db-series-link:visited, .db-series-link:hover, .db-series-link:active { color: inherit !important; text-decoration: none !important; }';
 document.getElementsByTagName('head')[0].appendChild(myScriptStyle);
 const aside_html =
     '<div class=c-aside > <h2><i class="">四字标题</i>· · · · · · </h2> <div class=c-aside-body  style="padding: 0 12px;"> <ul class=bs > </ul> </div> </div>';
@@ -200,6 +201,22 @@ function main() {
             });
 
             title_en = '';
+        }
+
+        // 中文标题若包含“第x季”，将序列名替换为搜索链接
+        if (title_cn) {
+            const m = title_cn.match(/^(.+?)\s*第([一二三四五六七八九十百\d]+)季/);
+            if (m && m[1]) {
+                const seriesName = m[1].trim();
+                const searchUrl = 'https://search.douban.com/movie/subject_search?search_text=' + encodeURIComponent(seriesName);
+                const titleSpanEl = h1_span[0];
+                const escapeForRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+                const leadingPattern = new RegExp('^' + escapeForRegExp(seriesName));
+                titleSpanEl.innerHTML = titleSpanEl.innerHTML.replace(
+                    leadingPattern,
+                    `<a class="db-series-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer nofollow" title="在豆瓣搜索「${seriesName}」的其他季">${seriesName}</a>`
+                );
+            }
         }
 
         //解析info内容
