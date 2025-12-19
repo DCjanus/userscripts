@@ -25,6 +25,10 @@ B 站动态视频卡片等地方自己劫持了点击事件，而不是使用 a 
 -   在开启脚本情况下，默认后台新标签页打开；按住 Ctrl 键后，前台新标签页打开。
 -   在关闭脚本情况下，默认前台新标签页打开；按住 Ctrl 键后，后台新标签页打开。
 
+## CodexUsageRemainingTime（Codex 用量窗口剩余时间）
+
+用于 [Codex 用量页面](https://chatgpt.com/codex/settings/usage) 显示每个用量窗口剩余时间，开发中，暂未发布至 GreasyFork。
+
 # 其他我正在使用的脚本
 
 -   [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714) B 站辅助脚本，有关闭 P2P CDN 等功能
