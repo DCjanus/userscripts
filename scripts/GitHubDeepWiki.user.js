@@ -29,28 +29,21 @@ function ensureStyle() {
     style.textContent = `
         .${BUTTON_CLASS} {
             align-items: center;
-            background: var(--color-btn-bg, #f6f8fa);
-            border: 1px solid var(--color-btn-border, #d0d7de);
-            border-radius: 6px;
-            color: var(--color-fg-default, #24292f);
             display: inline-flex;
-            font-size: 12px;
             gap: 4px;
-            line-height: 20px;
-            margin-left: 8px;
-            padding: 2px 6px;
+            margin-left: 4px;
+            padding: 0 6px;
             text-decoration: none;
             vertical-align: middle;
         }
 
         .${BUTTON_CLASS}:hover {
-            background: var(--color-btn-hover-bg, #f3f4f6);
             text-decoration: none;
         }
 
         .${BUTTON_CLASS} img {
-            height: 16px;
-            width: 16px;
+            height: 12px;
+            width: 12px;
         }
     `;
 
@@ -93,6 +86,7 @@ function getRepoInfo() {
 
     return {
         container,
+        visibilityLabel,
         owner: parts[0],
         repo: parts[1],
     };
@@ -121,7 +115,7 @@ function insertDeepWikiButton() {
 
     const link = document.createElement('a');
     link.id = BUTTON_ID;
-    link.className = BUTTON_CLASS;
+    link.className = `Label Label--secondary v-align-middle ${BUTTON_CLASS}`;
     link.href = deepWikiUrl;
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
@@ -138,21 +132,7 @@ function insertDeepWikiButton() {
     link.appendChild(icon);
     link.appendChild(text);
 
-    const visibilityLabel = info.container.querySelector('.Label');
-    if (visibilityLabel) {
-        visibilityLabel.insertAdjacentElement('afterend', link);
-        return true;
-    }
-
-    const nameWrapper =
-        info.container.querySelector('strong[itemprop="name"]') ||
-        info.container.querySelector('a[href]');
-    if (nameWrapper) {
-        nameWrapper.insertAdjacentElement('afterend', link);
-        return true;
-    }
-
-    info.container.appendChild(link);
+    info.visibilityLabel.insertAdjacentElement('afterend', link);
 
     return true;
 }
