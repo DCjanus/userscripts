@@ -5,8 +5,8 @@
 // @description  在 GitHub 仓库标题旁增加 DeepWiki 按钮，一键打开对应页面
 // @author       DCjanus
 // @include      https://github.com/*/*
-// @icon         https://deepwiki.com/favicon.ico
-// @version      20250308
+// @icon         https://github.com/favicon.ico
+// @version      20251225
 // @license      MIT
 // ==/UserScript==
 'use strict';

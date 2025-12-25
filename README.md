@@ -33,6 +33,10 @@ B 站动态视频卡片等地方自己劫持了点击事件，而不是使用 a 
 
 在 GitHub 仓库标题右侧增加 DeepWiki 按钮，一键跳转到对应的 DeepWiki 页面，开发中，暂未发布至 GreasyFork。
 
+## GitHubDateFormatCN（GitHub 日期中文显示）
+
+将 GitHub 页面日期格式显示为中文（例如 2025年4月28日），开发中，暂未发布至 GreasyFork。
+
 # 其他我正在使用的脚本
 
 -   [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714) B 站辅助脚本，有关闭 P2P CDN 等功能
