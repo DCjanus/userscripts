@@ -10,11 +10,11 @@
 
 | 脚本 | 简介 | 状态/链接 |
 | --- | --- | --- |
-| MoviePlus（豆瓣电影增强） | 豆瓣电影页面右侧添加资源搜索入口 | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
-| BiliTab（B 站视频后台标签页打开） | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
-| CodexUsageRemainingTime（Codex 用量窗口剩余时间） | Codex 用量页面显示剩余时间 | 不发布到 GreasyFork |
-| GitHubDeepWiki（GitHub 仓库 DeepWiki 快捷入口） | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
-| GitHubDateNumeric（GitHub 日期数字化） | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
+| [豆瓣电影增强](scripts/MoviePlus.user.js) | 豆瓣电影页面右侧添加资源搜索入口 | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
+| [B 站视频后台标签页打开](scripts/BiliTab.user.js) | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
+| [Codex 用量窗口剩余时间](scripts/CodexUsageRemainingTime.user.js) | Codex 用量页面显示剩余时间 | 不发布到 GreasyFork |
+| [GitHub 仓库 DeepWiki 快捷入口](scripts/GitHubDeepWiki.user.js) | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
+| [GitHub 日期数字化](scripts/GitHubDateNumeric.user.js) | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
 
 MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
