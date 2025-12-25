@@ -5,8 +5,8 @@
 // @description  在 Codex 用量页面展示每个用量窗口剩余时间
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/settings/usage
-// @icon         https://chatgpt.com/favicon.ico
-// @version      20251219
+// @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
+// @version      20251226
 // @license      MIT
 // ==/UserScript==
 'use strict';
