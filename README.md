@@ -8,34 +8,15 @@
 
 # 脚本列表
 
-## [MoviePlus](https://greasyfork.org/zh-CN/scripts/469243)（豆瓣电影增强）
+| 脚本 | 简介 | 状态/链接 |
+| --- | --- | --- |
+| MoviePlus（豆瓣电影增强） | 豆瓣电影页面右侧添加资源搜索入口 | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
+| BiliTab（B 站视频后台标签页打开） | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
+| CodexUsageRemainingTime（Codex 用量窗口剩余时间） | Codex 用量页面显示剩余时间 | 不发布到 GreasyFork |
+| GitHubDeepWiki（GitHub 仓库 DeepWiki 快捷入口） | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
+| GitHubDateNumeric（GitHub 日期数字化） | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
 
-豆瓣电影增强脚本，包含以下功能：
-
--   豆瓣电影页面右侧添加若干快速入口，一键搜索相关相关资源
-
-> Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
-
-## [BiliTab](https://greasyfork.org/zh-CN/scripts/469242)（B 站视频后台标签页打开）
-
-B 站动态视频卡片等地方自己劫持了点击事件，而不是使用 a 标签的默认行为，导致无法 Ctrl + 鼠标左键后台新标签页打开；想快速打开多个视频时，操作体验较差。
-
-点击脚本设置，可以分页面控制脚本开关，对应的行为：
-
--   在开启脚本情况下，默认后台新标签页打开；按住 Ctrl 键后，前台新标签页打开。
--   在关闭脚本情况下，默认前台新标签页打开；按住 Ctrl 键后，后台新标签页打开。
-
-## CodexUsageRemainingTime（Codex 用量窗口剩余时间）
-
-用于 [Codex 用量页面](https://chatgpt.com/codex/settings/usage) 显示每个用量窗口剩余时间，开发中，暂未发布至 GreasyFork。
-
-## GitHubDeepWiki（GitHub 仓库 DeepWiki 快捷入口）
-
-在 GitHub 仓库标题右侧增加 DeepWiki 按钮，一键跳转到对应的 DeepWiki 页面，开发中，暂未发布至 GreasyFork。
-
-## GitHubDateFormatCN（GitHub 日期中文显示）
-
-将 GitHub 页面日期格式显示为中文（例如 2025年4月28日），开发中，暂未发布至 GreasyFork。
+MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
 # 其他我正在使用的脚本
 
