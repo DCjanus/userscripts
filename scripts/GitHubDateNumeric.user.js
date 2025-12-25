@@ -88,7 +88,10 @@ function buildReplacement(node, text, title) {
     const replacement = document.createElement('span');
     replacement.textContent = text;
     replacement.className = node.className;
-    replacement.setAttribute('data-datetime', node.getAttribute('datetime') || '');
+    replacement.setAttribute(
+        'data-datetime',
+        node.getAttribute('datetime') || '',
+    );
     replacement.setAttribute('title', title);
 
     const ariaLabel = node.getAttribute('aria-label');
