@@ -60,7 +60,8 @@ function getRepoInfo() {
     }
 
     const visibilityText = visibilityLabel.textContent.trim().toLowerCase();
-    const isPublicRepo = visibilityText === 'public' || visibilityText === 'public archive';
+    const isPublicRepo =
+        visibilityText === 'public' || visibilityText === 'public archive';
     if (!isPublicRepo) {
         return null;
     }
