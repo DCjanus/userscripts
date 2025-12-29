@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @include      https://github.com/*/*
 // @icon         https://github.com/favicon.ico
-// @version      20251225
+// @version      20251229
 // @license      MIT
 // ==/UserScript==
 'use strict';
@@ -60,7 +60,9 @@ function getRepoInfo() {
     }
 
     const visibilityText = visibilityLabel.textContent.trim().toLowerCase();
-    if (visibilityText !== 'public') {
+    const isPublicRepo =
+        visibilityText === 'public' || visibilityText === 'public archive';
+    if (!isPublicRepo) {
         return null;
     }
 
