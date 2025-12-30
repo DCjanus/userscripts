@@ -6,13 +6,15 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20251225
+// @version      20251230
 // @license      MIT
 // ==/UserScript==
 'use strict';
 
 const SCRIPT_NAME = 'GitHubDateNumeric';
 const RELATIVE_TIME_SELECTOR = 'relative-time[datetime]';
+const COMMIT_GROUP_TITLE_SELECTOR = '[data-testid="commit-group-title"]';
+const COMMIT_GROUP_PREFIX = 'Commits on ';
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -84,6 +86,65 @@ function parseDatetime(node) {
     return { date, datetime };
 }
 
+function parseCommitGroupTitle(node) {
+    const text = node.textContent;
+    if (!text || !text.startsWith(COMMIT_GROUP_PREFIX)) {
+        return null;
+    }
+    const dateText = text.slice(COMMIT_GROUP_PREFIX.length).trim();
+    const match = dateText.match(/^([A-Za-z]+)\s+(\d{1,2}),\s+(\d{4})$/);
+    if (!match) {
+        return null;
+    }
+    const [, monthName, dayText, yearText] = match;
+    const months = {
+        Jan: 1,
+        January: 1,
+        Feb: 2,
+        February: 2,
+        Mar: 3,
+        March: 3,
+        Apr: 4,
+        April: 4,
+        May: 5,
+        Jun: 6,
+        June: 6,
+        Jul: 7,
+        July: 7,
+        Aug: 8,
+        August: 8,
+        Sep: 9,
+        Sept: 9,
+        September: 9,
+        Oct: 10,
+        October: 10,
+        Nov: 11,
+        November: 11,
+        Dec: 12,
+        December: 12,
+    };
+    const month = months[monthName];
+    if (!month) {
+        return null;
+    }
+    const day = Number(dayText);
+    const year = Number(yearText);
+    if (!Number.isFinite(day) || !Number.isFinite(year)) {
+        return null;
+    }
+    return { year, month, day };
+}
+
+function replaceCommitGroupTitle(node) {
+    const parsed = parseCommitGroupTitle(node);
+    if (!parsed) {
+        return;
+    }
+    const month = pad2(parsed.month);
+    const day = pad2(parsed.day);
+    node.textContent = `${COMMIT_GROUP_PREFIX}${parsed.year}-${month}-${day}`;
+}
+
 function buildReplacement(node, text, title) {
     const replacement = document.createElement('span');
     replacement.textContent = text;
@@ -118,6 +179,10 @@ function replaceAll() {
     const nodes = document.querySelectorAll(RELATIVE_TIME_SELECTOR);
     for (const node of nodes) {
         replaceRelativeTime(node);
+    }
+    const titles = document.querySelectorAll(COMMIT_GROUP_TITLE_SELECTOR);
+    for (const title of titles) {
+        replaceCommitGroupTitle(title);
     }
 }
 
