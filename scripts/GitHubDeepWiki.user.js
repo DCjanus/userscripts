@@ -163,7 +163,9 @@ function parseDeepWikiMetadata() {
     }
 
     if (!generatedAt) {
-        const ldJson = document.querySelector('script[type="application/ld+json"]');
+        const ldJson = document.querySelector(
+            'script[type="application/ld+json"]',
+        );
         if (ldJson && ldJson.textContent) {
             try {
                 const data = JSON.parse(ldJson.textContent);
@@ -171,7 +173,10 @@ function parseDeepWikiMetadata() {
                     generatedAt = data.dateModified;
                 }
             } catch (error) {
-                console.warn('[GitHubDeepWiki] 解析 DeepWiki 元信息失败', error);
+                console.warn(
+                    '[GitHubDeepWiki] 解析 DeepWiki 元信息失败',
+                    error,
+                );
             }
         }
     }
@@ -270,8 +275,6 @@ function setRepoLinkSuffix(link, repoInfo, suffixText) {
     link.insertBefore(textNode, link.firstChild);
 }
 
- 
-
 async function updateDeepWikiInfo() {
     const repoInfo = getDeepWikiRepoInfo();
     if (!repoInfo) {
@@ -294,7 +297,9 @@ async function updateDeepWikiInfo() {
 
     let baseGeneratedText = '';
     if (metadata.generatedAt) {
-        const normalizedGeneratedAt = normalizeGeneratedAt(metadata.generatedAt);
+        const normalizedGeneratedAt = normalizeGeneratedAt(
+            metadata.generatedAt,
+        );
         const generatedDate = new Date(normalizedGeneratedAt);
         if (!Number.isNaN(generatedDate.getTime())) {
             baseGeneratedText = `indexed at ${formatRelativeTime(generatedDate)}`;
@@ -304,7 +309,7 @@ async function updateDeepWikiInfo() {
     setRepoLinkSuffix(
         title,
         repoInfo,
-        baseGeneratedText ? `(${baseGeneratedText})` : '(time unavailable)'
+        baseGeneratedText ? `(${baseGeneratedText})` : '(time unavailable)',
     );
 }
 
