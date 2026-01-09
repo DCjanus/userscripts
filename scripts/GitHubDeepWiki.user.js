@@ -16,7 +16,8 @@ const BUTTON_ID = 'x-deepwiki-link-button';
 const BUTTON_CLASS = 'x-deepwiki-link';
 const STYLE_ID = 'x-deepwiki-link-style';
 const LOG_PREFIX = '[GitHubDeepWiki]';
-const ICON_DATA_URL = 'https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg';
+const ICON_DATA_URL =
+    'https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg';
 
 function ensureStyle() {
     if (document.getElementById(STYLE_ID)) {
