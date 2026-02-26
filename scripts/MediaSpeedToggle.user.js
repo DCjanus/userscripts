@@ -384,7 +384,6 @@
             applyAllRates();
         }, HEAL_INTERVAL_MS);
 
-        showToast(`MediaSpeedToggle 已加载（${isMac ? '⌘' : 'Ctrl'} + E）`);
     }
 
     if (document.readyState === 'loading') {
