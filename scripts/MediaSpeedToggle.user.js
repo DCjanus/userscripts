@@ -6,9 +6,11 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// @version      20260226.4
+// @version      20260226.5
 // @license      MIT
 // @run-at       document-start
+// @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // ==/UserScript==
 
 (() => {
@@ -36,6 +38,7 @@
     let pendingApply = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
+    let menuCommandId = null;
 
     const applyingMap = new WeakMap();
     const boundMedia = new WeakSet();
@@ -44,31 +47,15 @@
         return liveLocked ? RATE_NORMAL : preferredRate;
     }
 
-    function updateSpeedIndicator() {
-        let el = document.getElementById('dcjanus-media-speed-indicator');
-        if (!el) {
-            el = document.createElement('div');
-            el.id = 'dcjanus-media-speed-indicator';
-            el.style.cssText = [
-                'position:fixed',
-                'right:16px',
-                'bottom:16px',
-                'z-index:2147483647',
-                'background:rgba(20,20,20,.78)',
-                'color:#fff',
-                'padding:6px 10px',
-                'border-radius:999px',
-                'font-size:12px',
-                'line-height:1',
-                'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
-                'pointer-events:none',
-                'user-select:none',
-            ].join(';');
-            document.documentElement.appendChild(el);
+    function refreshMenu() {
+        if (menuCommandId !== null) {
+            GM_unregisterMenuCommand(menuCommandId);
         }
-
-        const lockText = liveLocked ? '（直播锁 1x）' : '';
-        el.textContent = `速度 ${currentRate()}x ${lockText}`.trim();
+        const lockText = liveLocked ? '（直播锁）' : '';
+        const menuText = `速度：${currentRate()}x ${lockText}`;
+        menuCommandId = GM_registerMenuCommand(menuText.trim(), () => {
+            showToast(`当前速度：${currentRate()}x${liveLocked ? '（直播锁）' : ''}`);
+        });
     }
 
     function showToast(message) {
@@ -276,7 +263,7 @@
 
         liveLocked = locked;
         applyAllRates();
-        updateSpeedIndicator();
+        refreshMenu();
 
         if (showMessage) {
             showToast(
@@ -314,14 +301,14 @@
         if (liveLocked) {
             preferredRate = RATE_NORMAL;
             applyAllRates();
-            updateSpeedIndicator();
+            refreshMenu();
             showToast('直播页仅允许 1x');
             return;
         }
 
         preferredRate = preferredRate === RATE_FAST ? RATE_NORMAL : RATE_FAST;
         applyAllRates();
-        updateSpeedIndicator();
+        refreshMenu();
         showToast(`速度：${preferredRate}x`);
     }
 
@@ -368,7 +355,7 @@
 
         refreshLiveLock(false);
         applyAllRates();
-        updateSpeedIndicator();
+        refreshMenu();
 
         window.setInterval(() => {
             refreshLiveLock(false);
