@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// @version      20260226.3
+// @version      20260226.4
 // @license      MIT
 // @run-at       document-start
 // ==/UserScript==
@@ -42,6 +42,33 @@
 
     function currentRate() {
         return liveLocked ? RATE_NORMAL : preferredRate;
+    }
+
+    function updateSpeedIndicator() {
+        let el = document.getElementById('dcjanus-media-speed-indicator');
+        if (!el) {
+            el = document.createElement('div');
+            el.id = 'dcjanus-media-speed-indicator';
+            el.style.cssText = [
+                'position:fixed',
+                'right:16px',
+                'bottom:16px',
+                'z-index:2147483647',
+                'background:rgba(20,20,20,.78)',
+                'color:#fff',
+                'padding:6px 10px',
+                'border-radius:999px',
+                'font-size:12px',
+                'line-height:1',
+                'font-family:-apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif',
+                'pointer-events:none',
+                'user-select:none',
+            ].join(';');
+            document.documentElement.appendChild(el);
+        }
+
+        const lockText = liveLocked ? '（直播锁 1x）' : '';
+        el.textContent = `速度 ${currentRate()}x ${lockText}`.trim();
     }
 
     function showToast(message) {
@@ -249,6 +276,7 @@
 
         liveLocked = locked;
         applyAllRates();
+        updateSpeedIndicator();
 
         if (showMessage) {
             showToast(
@@ -286,12 +314,14 @@
         if (liveLocked) {
             preferredRate = RATE_NORMAL;
             applyAllRates();
+            updateSpeedIndicator();
             showToast('直播页仅允许 1x');
             return;
         }
 
         preferredRate = preferredRate === RATE_FAST ? RATE_NORMAL : RATE_FAST;
         applyAllRates();
+        updateSpeedIndicator();
         showToast(`速度：${preferredRate}x`);
     }
 
@@ -338,6 +368,7 @@
 
         refreshLiveLock(false);
         applyAllRates();
+        updateSpeedIndicator();
 
         window.setInterval(() => {
             refreshLiveLock(false);
