@@ -334,7 +334,10 @@
                     return result;
                 } catch (error) {
                     queueMicrotask(checkUrlChanged);
-                    console.error('[MediaSpeedToggle] history wrapper failed:', error);
+                    console.error(
+                        '[MediaSpeedToggle] history wrapper failed:',
+                        error,
+                    );
                     throw error;
                 }
             };
