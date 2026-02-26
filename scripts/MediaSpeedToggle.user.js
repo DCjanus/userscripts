@@ -6,8 +6,7 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// TODO: 合并前改回 master 分支资源地址。
-// @icon         https://raw.githubusercontent.com/DCjanus/userscripts/feat/media-speed-toggle/assets/media-speed-toggle.svg
+// @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/media-speed-toggle.svg
 // @version      20260226
 // @license      MIT
 // @run-at       document-start
