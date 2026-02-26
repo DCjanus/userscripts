@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// @version      20260226.1
+// @version      20260226.2
 // @license      MIT
 // @run-at       document-start
 // ==/UserScript==
@@ -32,6 +32,7 @@
     let lastUrl = location.href;
     let pendingApply = 0;
     let toastTimer = 0;
+    let lastIncrementalApplyAt = 0;
 
     const applyingMap = new WeakMap();
     const boundMedia = new WeakSet();
@@ -122,6 +123,32 @@
         });
     }
 
+    function applyRatesForNode(node) {
+        let handled = false;
+
+        if (node instanceof HTMLMediaElement) {
+            bindMedia(node);
+            setMediaRate(node);
+            return true;
+        }
+
+        if (!(node instanceof Element || node instanceof DocumentFragment)) return false;
+
+        if (node instanceof Element && node.matches('video, audio')) {
+            bindMedia(node);
+            setMediaRate(node);
+            handled = true;
+        }
+
+        node.querySelectorAll('video, audio').forEach((media) => {
+            bindMedia(media);
+            setMediaRate(media);
+            handled = true;
+        });
+
+        return handled;
+    }
+
     function scheduleApplyAll() {
         if (pendingApply) return;
         pendingApply = window.setTimeout(() => {
@@ -172,15 +199,31 @@
         const title = (document.title || '').toLowerCase();
         if (/\blive\b|正在直播|直播中/.test(title)) return true;
 
-        const badge = document.querySelector(
-            '[aria-label*="live" i], [class*="live" i][class*="badge" i], [id*="live" i][id*="badge" i], [data-title*="直播"]',
-        );
-        if (badge) return true;
+        const hasLiveKeyword = (value) => {
+            if (!value) return false;
+            return /\blive\b/i.test(value) || /(正在直播|直播中)/.test(value);
+        };
 
-        const marker = document.querySelector(
-            'ytd-badge-supported-renderer, .live-status, .live-room-app, [class*="live-room" i]',
+        const candidates = document.querySelectorAll(
+            '[aria-label], [data-title], [data-live], ytd-badge-supported-renderer, .live-status, .live-room-app',
         );
-        if (marker) return true;
+        for (const candidate of candidates) {
+            if (!(candidate instanceof Element)) continue;
+
+            if (hasLiveKeyword(candidate.getAttribute('aria-label'))) return true;
+            if (hasLiveKeyword(candidate.getAttribute('data-title'))) return true;
+
+            const dataLive = (candidate.getAttribute('data-live') || '').toLowerCase();
+            if (dataLive === 'true' || dataLive === '1' || dataLive === 'live') return true;
+
+            for (const classToken of candidate.classList) {
+                if (/^(is-)?live$/i.test(classToken) || /^live[-_]/i.test(classToken) || /live[-_]badge/i.test(classToken)) {
+                    return true;
+                }
+            }
+
+            if (/(^|[-_])live([_-]|$)/i.test(candidate.id) || /live[-_]badge/i.test(candidate.id)) return true;
+        }
 
         return false;
     }
@@ -262,8 +305,14 @@
         wrapHistory('replaceState');
         window.addEventListener('popstate', checkUrlChanged, true);
 
-        const rootObserver = new MutationObserver(() => {
-            scheduleApplyAll();
+        const rootObserver = new MutationObserver((mutations) => {
+            let changed = false;
+            mutations.forEach((mutation) => {
+                mutation.addedNodes.forEach((node) => {
+                    changed = applyRatesForNode(node) || changed;
+                });
+            });
+            if (changed) lastIncrementalApplyAt = Date.now();
             checkUrlChanged();
         });
         rootObserver.observe(document.documentElement, {
@@ -284,6 +333,9 @@
         }, LIVE_RECHECK_MS);
 
         window.setInterval(() => {
+            if (document.hidden) return;
+            if (!document.querySelector('video, audio')) return;
+            if (Date.now() - lastIncrementalApplyAt < HEAL_INTERVAL_MS) return;
             applyAllRates();
         }, HEAL_INTERVAL_MS);
 
