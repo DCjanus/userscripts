@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// @version      20260226.2
+// @version      20260226.3
 // @license      MIT
 // @run-at       document-start
 // ==/UserScript==
@@ -26,7 +26,10 @@
     const LIVE_RECHECK_MS = 2500;
     const HEAL_INTERVAL_MS = 1500;
 
-    const isMac = navigator.platform.toUpperCase().includes('MAC');
+    const isMac =
+        navigator.userAgentData?.platform === 'macOS' ||
+        /\bMac(?:intosh)?\b/i.test(navigator.userAgent) ||
+        navigator.platform?.toUpperCase().includes('MAC');
     let preferredRate = RATE_FAST;
     let liveLocked = false;
     let lastUrl = location.href;
@@ -134,12 +137,6 @@
 
         if (!(node instanceof Element || node instanceof DocumentFragment))
             return false;
-
-        if (node instanceof Element && node.matches('video, audio')) {
-            bindMedia(node);
-            setMediaRate(node);
-            handled = true;
-        }
 
         node.querySelectorAll('video, audio').forEach((media) => {
             bindMedia(media);
