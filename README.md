@@ -18,6 +18,8 @@
 | [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页滚轮翻页 | 不发布到 GreasyFork |
 | [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js) | 全站视频 1x/3x 快捷切换，直播页自动锁 1x | 不发布到 GreasyFork |
 
+> `MediaSpeedToggle.user.js` 为 DCjanus 个人使用场景定制脚本，不追求通用性与可配置性。
+
 MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
 # 其他我正在使用的脚本
