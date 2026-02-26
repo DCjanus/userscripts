@@ -16,6 +16,9 @@
 | [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js) | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
 | [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js) | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
 | [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页滚轮翻页 | 不发布到 GreasyFork |
+| [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js) | 全站视频 1x/3x 快捷切换，直播页自动锁 1x | 不发布到 GreasyFork |
+
+> `MediaSpeedToggle.user.js` 为 DCjanus 个人使用场景定制脚本，不追求通用性与可配置性。
 
 MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
