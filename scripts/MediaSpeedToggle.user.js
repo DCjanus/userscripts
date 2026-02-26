@@ -383,7 +383,6 @@
             if (Date.now() - lastIncrementalApplyAt < HEAL_INTERVAL_MS) return;
             applyAllRates();
         }, HEAL_INTERVAL_MS);
-
     }
 
     if (document.readyState === 'loading') {
