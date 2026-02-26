@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
-// @version      20260226.5
+// @version      20260226.6
 // @license      MIT
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
@@ -108,9 +108,12 @@
         }
 
         applyingMap.set(media, true);
-        media.defaultPlaybackRate = rate;
-        media.playbackRate = rate;
-        applyingMap.set(media, false);
+        try {
+            media.defaultPlaybackRate = rate;
+            media.playbackRate = rate;
+        } finally {
+            applyingMap.set(media, false);
+        }
     }
 
     function bindMedia(media) {
@@ -325,9 +328,15 @@
         const wrapHistory = (methodName) => {
             const original = history[methodName];
             history[methodName] = function wrappedHistoryMethod(...args) {
-                const result = original.apply(this, args);
-                queueMicrotask(checkUrlChanged);
-                return result;
+                try {
+                    const result = original.apply(this, args);
+                    queueMicrotask(checkUrlChanged);
+                    return result;
+                } catch (error) {
+                    queueMicrotask(checkUrlChanged);
+                    console.error('[MediaSpeedToggle] history wrapper failed:', error);
+                    throw error;
+                }
             };
         };
 
@@ -370,7 +379,7 @@
             applyAllRates();
         }, HEAL_INTERVAL_MS);
 
-        showToast('MediaSpeedToggle 已加载（⌘/Ctrl + E）');
+        showToast(`MediaSpeedToggle 已加载（${isMac ? '⌘' : 'Ctrl'} + E）`);
     }
 
     if (document.readyState === 'loading') {
