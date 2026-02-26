@@ -80,7 +80,10 @@
         if (!(media instanceof HTMLMediaElement)) return;
         const rate = currentRate();
 
-        if (Math.abs(media.playbackRate - rate) < 0.001 && Math.abs(media.defaultPlaybackRate - rate) < 0.001) {
+        if (
+            Math.abs(media.playbackRate - rate) < 0.001 &&
+            Math.abs(media.defaultPlaybackRate - rate) < 0.001
+        ) {
             return;
         }
 
@@ -91,7 +94,8 @@
     }
 
     function bindMedia(media) {
-        if (!(media instanceof HTMLMediaElement) || boundMedia.has(media)) return;
+        if (!(media instanceof HTMLMediaElement) || boundMedia.has(media))
+            return;
         boundMedia.add(media);
 
         media.addEventListener(
@@ -103,7 +107,11 @@
             true,
         );
 
-        media.addEventListener('loadedmetadata', () => setMediaRate(media), true);
+        media.addEventListener(
+            'loadedmetadata',
+            () => setMediaRate(media),
+            true,
+        );
         media.addEventListener('play', () => setMediaRate(media), true);
     }
 
@@ -134,18 +142,31 @@
         const path = location.pathname.toLowerCase();
         const search = location.search.toLowerCase();
 
-        if (host === 'live.bilibili.com' || host.endsWith('.live.bilibili.com')) return true;
-        if (host.endsWith('youtube.com') && path.startsWith('/live')) return true;
-        if (host.includes('pornhub') && /(\/live|\/model|\/webcam|\/cam)/.test(path)) return true;
+        if (host === 'live.bilibili.com' || host.endsWith('.live.bilibili.com'))
+            return true;
+        if (host.endsWith('youtube.com') && path.startsWith('/live'))
+            return true;
+        if (
+            host.includes('pornhub') &&
+            /(\/live|\/model|\/webcam|\/cam)/.test(path)
+        )
+            return true;
 
-        if (host.endsWith('bilibili.com') && /(^\/blanc\/|^\/live\/|\/live$)/.test(path)) return true;
-        if (host.endsWith('youtube.com') && search.includes('live=')) return true;
+        if (
+            host.endsWith('bilibili.com') &&
+            /(^\/blanc\/|^\/live\/|\/live$)/.test(path)
+        )
+            return true;
+        if (host.endsWith('youtube.com') && search.includes('live='))
+            return true;
 
         return false;
     }
 
     function isLiveByDomSignal() {
-        const metaLive = document.querySelector('meta[itemprop="isLiveBroadcast"][content="True"]');
+        const metaLive = document.querySelector(
+            'meta[itemprop="isLiveBroadcast"][content="True"]',
+        );
         if (metaLive) return true;
 
         const title = (document.title || '').toLowerCase();
@@ -156,7 +177,9 @@
         );
         if (badge) return true;
 
-        const marker = document.querySelector('ytd-badge-supported-renderer, .live-status, .live-room-app, [class*="live-room" i]');
+        const marker = document.querySelector(
+            'ytd-badge-supported-renderer, .live-status, .live-room-app, [class*="live-room" i]',
+        );
         if (marker) return true;
 
         return false;
@@ -174,7 +197,11 @@
         applyAllRates();
 
         if (showMessage) {
-            showToast(liveLocked ? '直播页：已锁定 1x' : `直播锁已解除：${currentRate()}x`);
+            showToast(
+                liveLocked
+                    ? '直播页：已锁定 1x'
+                    : `直播锁已解除：${currentRate()}x`,
+            );
         }
     }
 
@@ -184,8 +211,18 @@
         const keyOk = event.code === 'KeyE';
         if (!keyOk) return;
 
-        const macMatch = isMac && event.metaKey && !event.ctrlKey && !event.altKey && !event.shiftKey;
-        const winMatch = !isMac && event.ctrlKey && !event.metaKey && !event.altKey && !event.shiftKey;
+        const macMatch =
+            isMac &&
+            event.metaKey &&
+            !event.ctrlKey &&
+            !event.altKey &&
+            !event.shiftKey;
+        const winMatch =
+            !isMac &&
+            event.ctrlKey &&
+            !event.metaKey &&
+            !event.altKey &&
+            !event.shiftKey;
 
         if (!macMatch && !winMatch) return;
 
@@ -229,7 +266,10 @@
             scheduleApplyAll();
             checkUrlChanged();
         });
-        rootObserver.observe(document.documentElement, { childList: true, subtree: true });
+        rootObserver.observe(document.documentElement, {
+            childList: true,
+            subtree: true,
+        });
     }
 
     function start() {
