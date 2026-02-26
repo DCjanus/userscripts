@@ -54,7 +54,9 @@
         const lockText = liveLocked ? '（直播锁）' : '';
         const menuText = `速度：${currentRate()}x ${lockText}`;
         menuCommandId = GM_registerMenuCommand(menuText.trim(), () => {
-            showToast(`当前速度：${currentRate()}x${liveLocked ? '（直播锁）' : ''}`);
+            showToast(
+                `当前速度：${currentRate()}x${liveLocked ? '（直播锁）' : ''}`,
+            );
         });
     }
 
