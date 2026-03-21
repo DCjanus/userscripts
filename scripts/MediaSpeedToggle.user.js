@@ -2,15 +2,17 @@
 // @name         MediaSpeedToggle
 // @name:zh-CN   全站视频倍速一键切换
 // @namespace    https://github.com/dcjanus/userscripts
-// @description  在大多数网站通过快捷键切换 1x/3x，直播页自动锁定 1x
+// @description  在大多数网站通过快捷键切换 1x/3x，并跨页面持久化当前速度
 // @author       DCjanus
 // @match        https://*/*
 // @match        http://*/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/media-speed-toggle.svg
-// @version      20260226
+// @version      20260322
 // @license      MIT
 // @run-at       document-start
+// @grant        GM_getValue
 // @grant        GM_registerMenuCommand
+// @grant        GM_setValue
 // @grant        GM_unregisterMenuCommand
 // ==/UserScript==
 
@@ -25,16 +27,15 @@
 
     const RATE_NORMAL = 1;
     const RATE_FAST = 3;
+    const STORAGE_KEY = 'preferredRate';
     const REAPPLY_DEBOUNCE_MS = 120;
-    const LIVE_RECHECK_MS = 2500;
     const HEAL_INTERVAL_MS = 1500;
 
     const isMac =
         navigator.userAgentData?.platform === 'macOS' ||
         /\bMac(?:intosh)?\b/i.test(navigator.userAgent) ||
         navigator.platform?.toUpperCase().includes('MAC');
-    let preferredRate = RATE_FAST;
-    let liveLocked = false;
+    let preferredRate = loadPreferredRate();
     let lastUrl = location.href;
     let pendingApply = 0;
     let toastTimer = 0;
@@ -45,19 +46,29 @@
     const boundMedia = new WeakSet();
 
     function currentRate() {
-        return liveLocked ? RATE_NORMAL : preferredRate;
+        return preferredRate;
+    }
+
+    function sanitizeRate(rate) {
+        return rate === RATE_NORMAL ? RATE_NORMAL : RATE_FAST;
+    }
+
+    function loadPreferredRate() {
+        return sanitizeRate(GM_getValue(STORAGE_KEY, RATE_FAST));
+    }
+
+    function persistPreferredRate(rate) {
+        preferredRate = sanitizeRate(rate);
+        GM_setValue(STORAGE_KEY, preferredRate);
     }
 
     function refreshMenu() {
         if (menuCommandId !== null) {
             GM_unregisterMenuCommand(menuCommandId);
         }
-        const lockText = liveLocked ? '（直播锁）' : '';
-        const menuText = `速度：${currentRate()}x ${lockText}`;
+        const menuText = `速度：${currentRate()}x`;
         menuCommandId = GM_registerMenuCommand(menuText.trim(), () => {
-            showToast(
-                `当前速度：${currentRate()}x${liveLocked ? '（直播锁）' : ''}`,
-            );
+            showToast(`当前速度：${currentRate()}x`);
         });
     }
 
@@ -182,104 +193,6 @@
         return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT';
     }
 
-    function isLiveByUrl() {
-        const host = location.host.toLowerCase();
-        const path = location.pathname.toLowerCase();
-        const search = location.search.toLowerCase();
-
-        if (host === 'live.bilibili.com' || host.endsWith('.live.bilibili.com'))
-            return true;
-        if (host.endsWith('youtube.com') && path.startsWith('/live'))
-            return true;
-        if (
-            host.includes('pornhub') &&
-            /(\/live|\/model|\/webcam|\/cam)/.test(path)
-        )
-            return true;
-
-        if (
-            host.endsWith('bilibili.com') &&
-            /(^\/blanc\/|^\/live\/|\/live$)/.test(path)
-        )
-            return true;
-        if (host.endsWith('youtube.com') && search.includes('live='))
-            return true;
-
-        return false;
-    }
-
-    function isLiveByDomSignal() {
-        const metaLive = document.querySelector(
-            'meta[itemprop="isLiveBroadcast"][content="True"]',
-        );
-        if (metaLive) return true;
-
-        const title = (document.title || '').toLowerCase();
-        if (/\blive\b|正在直播|直播中/.test(title)) return true;
-
-        const hasLiveKeyword = (value) => {
-            if (!value) return false;
-            return /\blive\b/i.test(value) || /(正在直播|直播中)/.test(value);
-        };
-
-        const candidates = document.querySelectorAll(
-            '[aria-label], [data-title], [data-live], ytd-badge-supported-renderer, .live-status, .live-room-app',
-        );
-        for (const candidate of candidates) {
-            if (!(candidate instanceof Element)) continue;
-
-            if (hasLiveKeyword(candidate.getAttribute('aria-label')))
-                return true;
-            if (hasLiveKeyword(candidate.getAttribute('data-title')))
-                return true;
-
-            const dataLive = (
-                candidate.getAttribute('data-live') || ''
-            ).toLowerCase();
-            if (dataLive === 'true' || dataLive === '1' || dataLive === 'live')
-                return true;
-
-            for (const classToken of candidate.classList) {
-                if (
-                    /^(is-)?live$/i.test(classToken) ||
-                    /^live[-_]/i.test(classToken) ||
-                    /live[-_]badge/i.test(classToken)
-                ) {
-                    return true;
-                }
-            }
-
-            if (
-                /(^|[-_])live([_-]|$)/i.test(candidate.id) ||
-                /live[-_]badge/i.test(candidate.id)
-            )
-                return true;
-        }
-
-        return false;
-    }
-
-    function detectLivePage() {
-        return isLiveByUrl() || isLiveByDomSignal();
-    }
-
-    function refreshLiveLock(showMessage) {
-        const locked = detectLivePage();
-        if (locked === liveLocked) return;
-
-        liveLocked = locked;
-        applyAllRates();
-        refreshMenu();
-
-        if (showMessage) {
-            showToast(
-                liveLocked
-                    ? '直播页：已锁定 1x'
-                    : `直播锁已解除：${currentRate()}x`,
-            );
-        }
-    }
-
     function handleShortcut(event) {
         if (isEditingTarget(event.target)) return;
 
@@ -304,25 +217,20 @@
         event.preventDefault();
         event.stopPropagation();
 
-        if (liveLocked) {
-            preferredRate = RATE_NORMAL;
-            applyAllRates();
-            refreshMenu();
-            showToast('直播页仅允许 1x');
-            return;
-        }
-
-        preferredRate = preferredRate === RATE_FAST ? RATE_NORMAL : RATE_FAST;
+        persistPreferredRate(
+            preferredRate === RATE_FAST ? RATE_NORMAL : RATE_FAST,
+        );
         applyAllRates();
         refreshMenu();
-        showToast(`速度：${preferredRate}x`);
+        showToast(`速度：${currentRate()}x`);
     }
 
     function setupNavigationHooks() {
         const checkUrlChanged = () => {
             if (location.href === lastUrl) return;
             lastUrl = location.href;
-            refreshLiveLock(false);
+            preferredRate = loadPreferredRate();
+            refreshMenu();
             scheduleApplyAll();
         };
 
@@ -368,13 +276,9 @@
         window.addEventListener('keydown', handleShortcut, true);
         setupNavigationHooks();
 
-        refreshLiveLock(false);
+        preferredRate = loadPreferredRate();
         applyAllRates();
         refreshMenu();
-
-        window.setInterval(() => {
-            refreshLiveLock(false);
-        }, LIVE_RECHECK_MS);
 
         window.setInterval(() => {
             if (document.hidden) return;
