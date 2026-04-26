@@ -30,8 +30,6 @@
     });
     const REAPPLY_DEBOUNCE_MS = 120;
     const HEAL_INTERVAL_MS = 1500;
-    const MENU_REGISTER_DELAY_MS = 1000;
-    const MENU_COMMAND_ID = 'dcjanus-media-speed-status';
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
         'a.tag-link[href*="from_source=video_tag"]';
@@ -74,10 +72,10 @@
     let pageOverrideRate = null;
     let lastUrl = location.href;
     let pendingApply = 0;
-    let pendingMenuRegister = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
-    let menuRegistered = false;
+    let menuCommandId = null;
+    let lastMenuText = '';
     let overlayKeydownHandler = null;
 
     const applyingMap = new WeakMap();
@@ -278,27 +276,24 @@
     }
 
     function refreshMenu() {
-        if (menuRegistered) return;
-        menuRegistered = true;
+        const menuText = formatMenuText(resolveRate());
+        if (menuText === lastMenuText && menuCommandId !== null) return;
 
-        GM_registerMenuCommand(
-            formatMenuText(resolveRate()),
+        const options = {
+            title: '查看 MediaSpeedToggle 状态与配置',
+        };
+        if (menuCommandId !== null) {
+            options.id = menuCommandId;
+        }
+
+        menuCommandId = GM_registerMenuCommand(
+            menuText,
             () => {
                 showInfoOverlay();
             },
-            {
-                id: MENU_COMMAND_ID,
-                title: '查看 MediaSpeedToggle 状态与配置',
-            },
+            options,
         );
-    }
-
-    function scheduleMenuRegistration() {
-        if (menuRegistered || pendingMenuRegister) return;
-        pendingMenuRegister = window.setTimeout(() => {
-            pendingMenuRegister = 0;
-            refreshMenu();
-        }, MENU_REGISTER_DELAY_MS);
+        lastMenuText = menuText;
     }
 
     function formatMenuText(decision) {
@@ -751,7 +746,6 @@
             lastUrl = location.href;
             pageOverrideRate = null;
             refreshMenu();
-            scheduleMenuRegistration();
             scheduleApplyAll();
         };
 
@@ -801,7 +795,7 @@
         setupNavigationHooks();
 
         applyAllRates();
-        scheduleMenuRegistration();
+        refreshMenu();
 
         window.setInterval(() => {
             if (document.hidden) return;
