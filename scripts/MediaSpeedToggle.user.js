@@ -33,7 +33,7 @@
     const HEAL_INTERVAL_MS = 1500;
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
-        'a.tag-link[href*="from_source=video_tag"]';
+        '.video-tag-container a.tag-link, a.tag-link[href*="from_source=video_tag"]';
     const BILIBILI_MUSIC_TAGS = new Set([
         '音乐',
         '音乐现场',
@@ -47,12 +47,14 @@
         '翻唱',
         '男声翻唱',
         '女声翻唱',
+        '说唱',
         '演奏',
         'VOCALOID',
         'VOCALOID·UTAU',
         'UTAU',
         'MV',
         '华语MV',
+        'mv说唱',
         'BGM',
     ]);
     const BILIBILI_DANCE_TAGS = new Set([
@@ -270,10 +272,22 @@
     }
 
     function collectBilibiliVideoTags() {
-        return Array.from(
+        const domTags = Array.from(
             document.querySelectorAll(BILIBILI_VIDEO_TAG_SELECTOR),
             (node) => normalizeBilibiliTag(node.textContent || ''),
         ).filter(Boolean);
+        const metaTags = collectBilibiliMetaTags();
+
+        return Array.from(new Set([...domTags, ...metaTags]));
+    }
+
+    function collectBilibiliMetaTags() {
+        const keywords = document.querySelector(
+            'meta[itemprop="keywords"], meta[name="keywords"]',
+        )?.content;
+        if (!keywords) return [];
+
+        return keywords.split(',').map(normalizeBilibiliTag).filter(Boolean);
     }
 
     function normalizeBilibiliTag(tag) {
