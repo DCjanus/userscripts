@@ -1,16 +1,18 @@
 // ==UserScript==
-// @name         Make BiliBili Great Again
+// @name         DCjanus BiliBili Tweaks
+// @name:zh-CN   DCjanus B 站增强
 // @namespace    https://github.com/dcjanus/userscripts
 // @version      20260426
 // @description  useful tweaks for bilibili.com
 // @author       kookxiang, DCjanus
 // @match        https://*.bilibili.com/*
+// @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/bilibili-avatar.svg
 // @run-at       document-body
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_notification
-// @downloadURL  https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/MakeBiliBiliGreatAgain.user.js
-// @updateURL    https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/MakeBiliBiliGreatAgain.user.js
+// @downloadURL  https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/BiliBiliTweaks.user.js
+// @updateURL    https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/BiliBiliTweaks.user.js
 // ==/UserScript==
 
 // 去掉叔叔去世时的全站黑白效果
