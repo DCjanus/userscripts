@@ -105,6 +105,10 @@
         return location.hostname.replace(/^www\./, '');
     }
 
+    function isTopWindow() {
+        return window.top === window.self;
+    }
+
     function getSiteRate() {
         const siteKey = currentSiteKey();
         return Object.prototype.hasOwnProperty.call(SITE_DEFAULT_RATES, siteKey)
@@ -277,6 +281,8 @@
     }
 
     function refreshMenu() {
+        if (!isTopWindow()) return;
+
         const menuText = formatMenuText(resolveRate());
         if (menuText === lastMenuText && menuCommandIds.length > 0) return;
 
