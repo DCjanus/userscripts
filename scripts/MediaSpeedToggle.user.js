@@ -287,10 +287,7 @@
         )?.content;
         if (!keywords) return [];
 
-        return keywords
-            .split(',')
-            .map(normalizeBilibiliTag)
-            .filter(Boolean);
+        return keywords.split(',').map(normalizeBilibiliTag).filter(Boolean);
     }
 
     function normalizeBilibiliTag(tag) {
