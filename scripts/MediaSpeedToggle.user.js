@@ -30,6 +30,7 @@
     });
     const REAPPLY_DEBOUNCE_MS = 120;
     const HEAL_INTERVAL_MS = 1500;
+    const MENU_REGISTER_DELAY_MS = 1000;
     const MENU_COMMAND_ID = 'dcjanus-media-speed-status';
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
@@ -73,6 +74,7 @@
     let pageOverrideRate = null;
     let lastUrl = location.href;
     let pendingApply = 0;
+    let pendingMenuRegister = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
     let menuRegistered = false;
@@ -280,7 +282,7 @@
         menuRegistered = true;
 
         GM_registerMenuCommand(
-            'MediaSpeedToggle 状态与配置',
+            formatMenuText(resolveRate()),
             () => {
                 showInfoOverlay();
             },
@@ -289,6 +291,26 @@
                 title: '查看 MediaSpeedToggle 状态与配置',
             },
         );
+    }
+
+    function scheduleMenuRegistration() {
+        if (menuRegistered || pendingMenuRegister) return;
+        pendingMenuRegister = window.setTimeout(() => {
+            pendingMenuRegister = 0;
+            refreshMenu();
+        }, MENU_REGISTER_DELAY_MS);
+    }
+
+    function formatMenuText(decision) {
+        return `状态与配置：${formatRate(decision.rate)}（${formatShortReason(decision)}）`;
+    }
+
+    function formatShortReason(decision) {
+        if (decision.reason) return decision.reason;
+
+        if (decision.rule === 'page-override') return '本页临时';
+        if (decision.rule === 'source-site-default') return '站点默认';
+        return '源码默认';
     }
 
     function showInfoOverlay() {
@@ -729,6 +751,7 @@
             lastUrl = location.href;
             pageOverrideRate = null;
             refreshMenu();
+            scheduleMenuRegistration();
             scheduleApplyAll();
         };
 
@@ -778,7 +801,7 @@
         setupNavigationHooks();
 
         applyAllRates();
-        refreshMenu();
+        scheduleMenuRegistration();
 
         window.setInterval(() => {
             if (document.hidden) return;
