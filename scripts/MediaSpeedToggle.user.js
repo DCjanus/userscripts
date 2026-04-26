@@ -11,6 +11,7 @@
 // @license      MIT
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // ==/UserScript==
 
 (() => {
@@ -74,7 +75,7 @@
     let pendingApply = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
-    let menuCommandId = null;
+    let menuCommandIds = [];
     let lastMenuText = '';
     let overlayKeydownHandler = null;
 
@@ -277,23 +278,35 @@
 
     function refreshMenu() {
         const menuText = formatMenuText(resolveRate());
-        if (menuText === lastMenuText && menuCommandId !== null) return;
+        if (menuText === lastMenuText && menuCommandIds.length > 0) return;
 
-        const options = {
-            title: '查看 MediaSpeedToggle 状态与配置',
-        };
-        if (menuCommandId !== null) {
-            options.id = menuCommandId;
-        }
-
-        menuCommandId = GM_registerMenuCommand(
-            menuText,
-            () => {
-                showInfoOverlay();
-            },
-            options,
+        unregisterMenuCommands();
+        menuCommandIds.push(
+            GM_registerMenuCommand(
+                menuText,
+                () => {
+                    showInfoOverlay();
+                },
+                {
+                    title: '查看 MediaSpeedToggle 状态与配置',
+                },
+            ),
         );
         lastMenuText = menuText;
+    }
+
+    function unregisterMenuCommands() {
+        menuCommandIds.forEach((id) => {
+            try {
+                GM_unregisterMenuCommand(id);
+            } catch (error) {
+                console.warn(
+                    '[MediaSpeedToggle] failed to unregister menu command:',
+                    error,
+                );
+            }
+        });
+        menuCommandIds = [];
     }
 
     function formatMenuText(decision) {
