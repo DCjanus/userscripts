@@ -279,12 +279,16 @@
         if (menuText === lastMenuText) return;
         lastMenuText = menuText;
 
-        GM_registerMenuCommand(menuText, () => {
-            showInfoOverlay();
-        }, {
-            id: MENU_COMMAND_ID,
-            title: '查看 MediaSpeedToggle 状态与配置',
-        });
+        GM_registerMenuCommand(
+            menuText,
+            () => {
+                showInfoOverlay();
+            },
+            {
+                id: MENU_COMMAND_ID,
+                title: '查看 MediaSpeedToggle 状态与配置',
+            },
+        );
     }
 
     function scheduleMenuRefresh() {
