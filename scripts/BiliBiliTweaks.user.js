@@ -350,8 +350,7 @@ if (location.href.startsWith('https://live.bilibili.com/')) {
 
     function rewriteLiveMediaUrl(url) {
         const mcdnRegexp = /[xy0-9]+\.mcdn\.bilivideo\.cn:\d+/;
-        const smtcdnsRegexp =
-            /[\w.]+\.smtcdns.net\/([\w-]+\.bilivideo.com\/)/;
+        const smtcdnsRegexp = /[\w.]+\.smtcdns.net\/([\w-]+\.bilivideo.com\/)/;
         const qualityRegexp = /(live-bvc\/\d+\/live_\d+_\d+)_\w+/;
 
         if (mcdnRegexp.test(url) && unsafeWindow.disableLiveP2P) {
@@ -414,7 +413,9 @@ if (location.href.startsWith('https://live.bilibili.com/')) {
             if (url) {
                 const rewritten = rewriteLiveMediaUrl(url);
                 if (rewritten.blocked) {
-                    return Promise.reject(new TypeError('Blocked live P2P URL'));
+                    return Promise.reject(
+                        new TypeError('Blocked live P2P URL'),
+                    );
                 }
                 if (rewritten.url !== url) {
                     args[0] = replaceRequestUrl(args[0], rewritten.url);
