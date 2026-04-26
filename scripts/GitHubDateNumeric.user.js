@@ -15,7 +15,9 @@ const SCRIPT_NAME = 'GitHubDateNumeric';
 const RELATIVE_TIME_SELECTOR = 'relative-time[datetime]';
 const COMMIT_GROUP_TITLE_SELECTOR = '[data-testid="commit-group-title"]';
 const COMMIT_GROUP_PREFIX = 'Commits on ';
-const RELATIVE_TIME_PATCHED = Symbol.for('GitHubDateNumeric.relativeTimePatched');
+const RELATIVE_TIME_PATCHED = Symbol.for(
+    'GitHubDateNumeric.relativeTimePatched',
+);
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -120,10 +122,7 @@ function renderRelativeTime(node) {
     const now = new Date();
     let display = pickDisplay(parsed.date, now);
     const prefix = getDatePrefix(node, node.textContent || '');
-    if (
-        Math.abs(now.getTime() - parsed.date.getTime()) >= WEEK_MS &&
-        prefix
-    ) {
+    if (Math.abs(now.getTime() - parsed.date.getTime()) >= WEEK_MS && prefix) {
         display = `${prefix}${display}`;
     }
     node.setAttribute('title', formatDateTime(parsed.date));
