@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20251230
+// @version      20260426
 // @license      MIT
 // ==/UserScript==
 'use strict';
@@ -15,6 +15,7 @@ const SCRIPT_NAME = 'GitHubDateNumeric';
 const RELATIVE_TIME_SELECTOR = 'relative-time[datetime]';
 const COMMIT_GROUP_TITLE_SELECTOR = '[data-testid="commit-group-title"]';
 const COMMIT_GROUP_PREFIX = 'Commits on ';
+const RELATIVE_TIME_PATCHED = Symbol.for('GitHubDateNumeric.relativeTimePatched');
 const MINUTE_MS = 60 * 1000;
 const HOUR_MS = 60 * MINUTE_MS;
 const DAY_MS = 24 * HOUR_MS;
@@ -86,6 +87,90 @@ function parseDatetime(node) {
     return { date, datetime };
 }
 
+function setRelativeTimeText(node, text) {
+    const target = node.shadowRoot;
+    if (target) {
+        const root = target.querySelector('[part="root"]');
+        if (root) {
+            root.textContent = text;
+            return;
+        }
+        target.textContent = text;
+        return;
+    }
+    node.textContent = text;
+}
+
+function getDatePrefix(node, text) {
+    const explicitPrefix = node.getAttribute('prefix');
+    if (explicitPrefix === '') {
+        return '';
+    }
+    if (explicitPrefix) {
+        return `${explicitPrefix.trim()} `;
+    }
+    return text.trim().startsWith('on ') ? 'on ' : '';
+}
+
+function renderRelativeTime(node) {
+    const parsed = parseDatetime(node);
+    if (!parsed) {
+        return;
+    }
+    const now = new Date();
+    let display = pickDisplay(parsed.date, now);
+    const prefix = getDatePrefix(node, node.textContent || '');
+    if (
+        Math.abs(now.getTime() - parsed.date.getTime()) >= WEEK_MS &&
+        prefix
+    ) {
+        display = `${prefix}${display}`;
+    }
+    node.setAttribute('title', formatDateTime(parsed.date));
+    setRelativeTimeText(node, display);
+}
+
+function updateRelativeTimeNode(node) {
+    if (typeof node.update === 'function') {
+        node.update();
+        return;
+    }
+    renderRelativeTime(node);
+}
+
+function patchRelativeTimeElement(RelativeTimeElement) {
+    const proto = RelativeTimeElement && RelativeTimeElement.prototype;
+    if (!proto || proto[RELATIVE_TIME_PATCHED]) {
+        return;
+    }
+    const originalUpdate = proto.update;
+    if (typeof originalUpdate !== 'function') {
+        return;
+    }
+    Object.defineProperty(proto, RELATIVE_TIME_PATCHED, {
+        value: true,
+    });
+    proto.update = function update() {
+        originalUpdate.call(this);
+        renderRelativeTime(this);
+    };
+}
+
+function setupRelativeTimeHook(schedule) {
+    window.customElements
+        .whenDefined('relative-time')
+        .then(() => {
+            patchRelativeTimeElement(
+                window.customElements.get('relative-time') ||
+                    window.RelativeTimeElement,
+            );
+            schedule();
+        })
+        .catch((error) => {
+            console.error(`[${SCRIPT_NAME}]`, error);
+        });
+}
+
 function parseCommitGroupTitle(node) {
     const text = node.textContent;
     if (!text || !text.startsWith(COMMIT_GROUP_PREFIX)) {
@@ -145,40 +230,10 @@ function replaceCommitGroupTitle(node) {
     node.textContent = `${COMMIT_GROUP_PREFIX}${parsed.year}-${month}-${day}`;
 }
 
-function buildReplacement(node, text, title) {
-    const replacement = document.createElement('span');
-    replacement.textContent = text;
-    replacement.className = node.className;
-    replacement.setAttribute(
-        'data-datetime',
-        node.getAttribute('datetime') || '',
-    );
-    replacement.setAttribute('title', title);
-
-    const ariaLabel = node.getAttribute('aria-label');
-    if (ariaLabel) {
-        replacement.setAttribute('aria-label', ariaLabel);
-    }
-
-    return replacement;
-}
-
-function replaceRelativeTime(node) {
-    const parsed = parseDatetime(node);
-    if (!parsed) {
-        return;
-    }
-    const now = new Date();
-    const display = pickDisplay(parsed.date, now);
-    const title = formatDateTime(parsed.date);
-    const replacement = buildReplacement(node, display, title);
-    node.replaceWith(replacement);
-}
-
-function replaceAll() {
+function refreshAll() {
     const nodes = document.querySelectorAll(RELATIVE_TIME_SELECTOR);
     for (const node of nodes) {
-        replaceRelativeTime(node);
+        updateRelativeTimeNode(node);
     }
     const titles = document.querySelectorAll(COMMIT_GROUP_TITLE_SELECTOR);
     for (const title of titles) {
@@ -195,10 +250,11 @@ function setupObserver() {
         pending = true;
         window.requestAnimationFrame(() => {
             pending = false;
-            replaceAll();
+            refreshAll();
         });
     };
 
+    setupRelativeTimeHook(schedule);
     schedule();
 
     const observer = new MutationObserver(schedule);
@@ -212,7 +268,13 @@ function setupObserver() {
 }
 
 try {
-    setupObserver();
+    if (document.body) {
+        setupObserver();
+    } else {
+        document.addEventListener('DOMContentLoaded', setupObserver, {
+            once: true,
+        });
+    }
 } catch (error) {
     console.error(`[${SCRIPT_NAME}]`, error);
 }
