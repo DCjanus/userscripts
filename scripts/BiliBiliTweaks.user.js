@@ -11,8 +11,6 @@
 // @grant        unsafeWindow
 // @grant        GM_addStyle
 // @grant        GM_notification
-// @downloadURL  https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/BiliBiliTweaks.user.js
-// @updateURL    https://raw.githubusercontent.com/DCjanus/userscripts/master/scripts/BiliBiliTweaks.user.js
 // ==/UserScript==
 
 // 去掉叔叔去世时的全站黑白效果
