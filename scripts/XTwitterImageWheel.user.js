@@ -82,9 +82,7 @@ function getRouteState() {
         };
     }
 
-    const tweetMatch = location.pathname.match(
-        /^\/([^/]+)\/status\/(\d+)\/?$/,
-    );
+    const tweetMatch = location.pathname.match(/^\/([^/]+)\/status\/(\d+)\/?$/);
     if (tweetMatch) {
         const tweet = {
             screenName: tweetMatch[1],
@@ -125,7 +123,10 @@ function upgradeImageUrl(src) {
 
     try {
         const url = new URL(src, location.href);
-        if (url.hostname.endsWith('twimg.com') && url.pathname.includes('/media/')) {
+        if (
+            url.hostname.endsWith('twimg.com') &&
+            url.pathname.includes('/media/')
+        ) {
             url.searchParams.set('name', 'orig');
             return url.toString();
         }
@@ -155,7 +156,9 @@ function collectTweetPhotos(route) {
                 index: linkRoute.photoIndex,
                 href: linkRoute.pathname,
                 src,
-                alt: link.querySelector('img')?.alt || `Photo ${linkRoute.photoIndex}`,
+                alt:
+                    link.querySelector('img')?.alt ||
+                    `Photo ${linkRoute.photoIndex}`,
             });
         }
     }
@@ -250,9 +253,11 @@ function ensureStyle() {
 
 function rectFromElement(element) {
     const rect = element.getBoundingClientRect();
-    if (rect.width < MIN_MEDIA_SIZE || rect.height < MIN_MEDIA_SIZE) return null;
+    if (rect.width < MIN_MEDIA_SIZE || rect.height < MIN_MEDIA_SIZE)
+        return null;
     if (rect.right <= 0 || rect.bottom <= 0) return null;
-    if (rect.left >= window.innerWidth || rect.top >= window.innerHeight) return null;
+    if (rect.left >= window.innerWidth || rect.top >= window.innerHeight)
+        return null;
 
     return {
         left: Math.max(0, rect.left),
@@ -260,7 +265,8 @@ function rectFromElement(element) {
         right: Math.min(window.innerWidth, rect.right),
         bottom: Math.min(window.innerHeight, rect.bottom),
         width: Math.min(window.innerWidth, rect.right) - Math.max(0, rect.left),
-        height: Math.min(window.innerHeight, rect.bottom) - Math.max(0, rect.top),
+        height:
+            Math.min(window.innerHeight, rect.bottom) - Math.max(0, rect.top),
     };
 }
 
@@ -274,8 +280,10 @@ function largestVisibleMediaImage() {
     return mediaImages()
         .map((image) => ({ image, rect: rectFromElement(image) }))
         .filter((item) => item.rect)
-        .sort((a, b) => b.rect.width * b.rect.height - a.rect.width * a.rect.height)[0]
-        ?.image;
+        .sort(
+            (a, b) =>
+                b.rect.width * b.rect.height - a.rect.width * a.rect.height,
+        )[0]?.image;
 }
 
 function mediaPaneRectFromImage(image) {
@@ -290,7 +298,8 @@ function mediaPaneRectFromImage(image) {
     ) {
         const rect = rectFromElement(element);
         if (!rect) continue;
-        if (rect.width < imageRect.width || rect.height < imageRect.height) continue;
+        if (rect.width < imageRect.width || rect.height < imageRect.height)
+            continue;
         if (rect.height < window.innerHeight * 0.68) continue;
 
         candidates.push(rect);
@@ -371,7 +380,10 @@ function applyPaneRect(element, rect) {
     element.style.top = `${Math.round(rect.top)}px`;
     element.style.width = `${Math.round(rect.width)}px`;
     element.style.height = `${Math.round(rect.height)}px`;
-    element.style.setProperty('--xtig-pane-height', `${Math.round(rect.height)}px`);
+    element.style.setProperty(
+        '--xtig-pane-height',
+        `${Math.round(rect.height)}px`,
+    );
 }
 
 function layoutActiveLayer() {
