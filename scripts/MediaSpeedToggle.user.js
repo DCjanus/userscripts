@@ -380,7 +380,11 @@
     function closeInfoOverlay() {
         document.getElementById(OVERLAY_ID)?.remove();
         if (overlayKeydownHandler) {
-            document.removeEventListener('keydown', overlayKeydownHandler, true);
+            document.removeEventListener(
+                'keydown',
+                overlayKeydownHandler,
+                true,
+            );
             overlayKeydownHandler = null;
         }
     }
@@ -394,7 +398,10 @@
             ['规则 ID', decision.rule],
             ['覆盖关系', explainDecision(decision)],
             ['本页临时', formatOptionalRate(decision.pageOverrideRate)],
-            ['页面规则', decision.source === '页面规则' ? decision.reason : '未命中'],
+            [
+                '页面规则',
+                decision.source === '页面规则' ? decision.reason : '未命中',
+            ],
         ]);
         appendSection(container, '站点状态', [
             ['当前站点', decision.siteKey],
@@ -404,7 +411,10 @@
         appendSection(container, '全局状态', [
             ['源码默认', formatRate(decision.defaultRate)],
             ['快捷键', isMac ? 'Cmd+E' : 'Ctrl+E'],
-            ['速度档位', `${formatRate(RATE_NORMAL)} / ${formatRate(RATE_FAST)}`],
+            [
+                '速度档位',
+                `${formatRate(RATE_NORMAL)} / ${formatRate(RATE_FAST)}`,
+            ],
             ['优先级', '本页临时 > 页面规则 > 源码站点默认 > 源码默认'],
             ['持久化状态', '无'],
         ]);
@@ -482,7 +492,9 @@
     }
 
     function formatOptionalRate(rate) {
-        return rate === null || rate === undefined ? '未设置' : formatRate(rate);
+        return rate === null || rate === undefined
+            ? '未设置'
+            : formatRate(rate);
     }
 
     function formatList(items) {
