@@ -32,11 +32,52 @@ const uselessUrlParams = [
     'mid',
     'session_id',
     'timestamp',
+    'trackid',
     'up_id',
     'vd_source',
     /^share/,
     /^spm/,
 ];
+
+function getRequestUrl(input) {
+    if (typeof input === 'string') return input;
+    if (input instanceof URL || input instanceof unsafeWindow.URL) {
+        return input.toString();
+    }
+    if (input?.url) return input.url;
+    return undefined;
+}
+
+function replaceRequestUrl(input, url) {
+    if (typeof input === 'string') return url;
+    if (input instanceof URL || input instanceof unsafeWindow.URL) {
+        return new unsafeWindow.URL(url);
+    }
+
+    const RequestCtor = unsafeWindow.Request || globalThis.Request;
+    if (RequestCtor && input instanceof RequestCtor) {
+        return new RequestCtor(url, input);
+    }
+
+    return url;
+}
+
+function defineReadonlyGlobal(name, value) {
+    try {
+        Object.defineProperty(unsafeWindow, name, {
+            get() {
+                return value;
+            },
+            set() {},
+            enumerable: false,
+            configurable: false,
+        });
+    } catch (e) {
+        try {
+            unsafeWindow[name] = value;
+        } catch (e) {}
+    }
+}
 
 // Block WebRTC，CNM 陈睿你就缺这点棺材钱？
 try {
@@ -83,17 +124,20 @@ if (location.host === 'www.bilibili.com') {
 // 动态页面优化
 if (location.host === 't.bilibili.com') {
     GM_addStyle(
-        'html[wide] #app { display: flex; } html[wide] .bili-dyn-home--member { box-sizing: border-box;padding: 0 10px;width: 100%;flex: 1; } html[wide] .bili-dyn-content { width: initial; } html[wide] main { margin: 0 8px;flex: 1;overflow: hidden;width: initial; } #wide-mode-switch { margin-left: 0;margin-right: 20px; } .bili-dyn-list__item:has(.bili-dyn-card-goods), .bili-dyn-list__item:has(.bili-rich-text-module.goods) { display: none !important }',
+        'html[wide] #app { display: flex; } html[wide] .bili-dyn-home--member { box-sizing: border-box;padding: 0 10px;width: 100%;flex: 1; } html[wide] .bili-dyn-content { width: initial; } html[wide] main { margin: 0 8px;flex: 1;overflow: hidden;width: initial; } #wide-mode-switch { margin-left: 0;margin-right: 20px; } #wide-mode-switch.floating { position: fixed; right: 24px; bottom: 24px; z-index: 10000; padding: 8px 12px; border-radius: 6px; color: #fff; background: #00aeec; box-shadow: 0 2px 10px rgba(0, 0, 0, .18); } .bili-dyn-list__item:has(.bili-dyn-card-goods), .bili-dyn-list__item:has(.bili-rich-text-module.goods) { display: none !important }',
     );
     if (!localStorage.WIDE_OPT_OUT) {
         document.documentElement.setAttribute('wide', 'wide');
     }
-    window.addEventListener('load', function () {
-        const tabContainer = document.querySelector(
-            '.bili-dyn-list-tabs__list',
-        );
-        const placeHolder = document.createElement('div');
-        placeHolder.style.flex = 1;
+    function injectWideModeSwitch() {
+        if (document.querySelector('#wide-mode-switch')) return true;
+
+        const tabContainer =
+            document.querySelector('.bili-dyn-list-tabs__list') ||
+            document.querySelector('.bili-dyn-content') ||
+            document.querySelector('main');
+        if (!tabContainer) return false;
+
         const switchButton = document.createElement('a');
         switchButton.id = 'wide-mode-switch';
         switchButton.className = 'bili-dyn-list-tabs__item';
@@ -108,8 +152,23 @@ if (location.host === 't.bilibili.com') {
                 document.documentElement.removeAttribute('wide');
             }
         });
-        tabContainer.appendChild(placeHolder);
+
+        if (tabContainer.matches('.bili-dyn-list-tabs__list')) {
+            const placeHolder = document.createElement('div');
+            placeHolder.style.flex = 1;
+            tabContainer.appendChild(placeHolder);
+        } else {
+            switchButton.classList.add('floating');
+        }
         tabContainer.appendChild(switchButton);
+        return true;
+    }
+    window.addEventListener('load', function () {
+        if (injectWideModeSwitch()) return;
+        const observer = new MutationObserver(() => {
+            if (injectWideModeSwitch()) observer.disconnect();
+        });
+        observer.observe(document.body, { childList: true, subtree: true });
     });
 }
 
@@ -135,14 +194,31 @@ if (unsafeWindow.__INITIAL_STATE__?.elecFullInfo) {
 }
 
 // 修复文章区复制
-if (location.href.startsWith('https://www.bilibili.com/read/cv')) {
-    unsafeWindow.original.reprint = '1';
-    document
-        .querySelector('.article-holder')
-        .classList.remove('unable-reprint');
-    document
-        .querySelector('.article-holder')
-        .addEventListener('copy', (e) => e.stopImmediatePropagation(), true);
+if (
+    location.href.startsWith('https://www.bilibili.com/read/cv') ||
+    location.href.startsWith('https://www.bilibili.com/opus/')
+) {
+    if (unsafeWindow.original) unsafeWindow.original.reprint = '1';
+
+    function unlockArticleCopy() {
+        document
+            .querySelectorAll('.article-holder, .opus-module-content')
+            .forEach((holder) => {
+                holder.classList.remove('unable-reprint');
+            });
+    }
+
+    document.addEventListener(
+        'copy',
+        (e) => e.stopImmediatePropagation(),
+        true,
+    );
+    unlockArticleCopy();
+    window.addEventListener('load', unlockArticleCopy);
+    new MutationObserver(unlockArticleCopy).observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 // 去 P2P CDN
@@ -195,11 +271,12 @@ if (
     }
 
     function replaceP2PUrlDeep(obj) {
+        if (!obj || typeof obj !== 'object') return;
         for (const key in obj) {
             if (typeof obj[key] === 'string') {
                 obj[key] = replaceP2PUrl(obj[key]);
             } else if (
-                typeof obj[key] === 'array' ||
+                Array.isArray(obj[key]) ||
                 typeof obj[key] === 'object'
             ) {
                 replaceP2PUrlDeep(obj[key]);
@@ -239,41 +316,117 @@ if (
 
 // 真·原画直播
 if (location.href.startsWith('https://live.bilibili.com/')) {
-    unsafeWindow.disableMcdn = true;
-    unsafeWindow.disableSmtcdns = true;
+    const LIVE_PLAY_INFO_PATH = '/xlive/web-room/v2/index/getRoomPlayInfo';
+
+    unsafeWindow.disableLiveP2P = true;
     unsafeWindow.forceHighestQuality =
         localStorage.getItem('forceHighestQuality') === 'true';
     let recentErrors = 0;
-    setInterval(() => (recentErrors > 0 ? recentErrors / 2 : null), 10000);
+    setInterval(() => {
+        recentErrors = Math.floor(recentErrors / 2);
+    }, 10000);
+
+    function isLivePlayInfoUrl(url) {
+        try {
+            return new URL(url, location.href).pathname === LIVE_PLAY_INFO_PATH;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function preferHighestLiveQuality(input) {
+        const url = getRequestUrl(input);
+        if (!unsafeWindow.forceHighestQuality || !url) return input;
+
+        try {
+            const urlObj = new URL(url, location.href);
+            if (urlObj.pathname !== LIVE_PLAY_INFO_PATH) return input;
+            urlObj.searchParams.set('qn', '30000');
+            return replaceRequestUrl(input, urlObj.toString());
+        } catch (e) {
+            return input;
+        }
+    }
+
+    function rewriteLiveMediaUrl(url) {
+        const mcdnRegexp = /[xy0-9]+\.mcdn\.bilivideo\.cn:\d+/;
+        const smtcdnsRegexp =
+            /[\w.]+\.smtcdns.net\/([\w-]+\.bilivideo.com\/)/;
+        const qualityRegexp = /(live-bvc\/\d+\/live_\d+_\d+)_\w+/;
+
+        if (mcdnRegexp.test(url) && unsafeWindow.disableLiveP2P) {
+            return { blocked: true, url };
+        }
+        if (smtcdnsRegexp.test(url) && unsafeWindow.disableLiveP2P) {
+            return { blocked: false, url: url.replace(smtcdnsRegexp, '$1') };
+        }
+        if (qualityRegexp.test(url) && unsafeWindow.forceHighestQuality) {
+            return {
+                blocked: false,
+                url: url
+                    .replace(qualityRegexp, '$1')
+                    .replace(/(\d+)_(mini|pro)hevc/g, '$1'),
+            };
+        }
+        return { blocked: false, url };
+    }
+
+    function disableLiveP2PInPayload(payload) {
+        const seen = new WeakSet();
+
+        function walk(obj) {
+            if (!obj || typeof obj !== 'object' || seen.has(obj)) return;
+            seen.add(obj);
+
+            if (obj.p2p_data && typeof obj.p2p_data === 'object') {
+                obj.p2p_data.p2p_type = 0;
+            }
+            if (Object.prototype.hasOwnProperty.call(obj, 'need_p2p')) {
+                obj.need_p2p = 0;
+            }
+
+            for (const key in obj) walk(obj[key]);
+        }
+
+        walk(payload);
+        return payload;
+    }
+
+    function livePlayInfoResponse(response, payload) {
+        const headers = new unsafeWindow.Headers(response.headers);
+        headers.delete('content-length');
+        headers.delete('content-encoding');
+        headers.set('content-type', 'application/json; charset=utf-8');
+
+        return new unsafeWindow.Response(JSON.stringify(payload), {
+            status: response.status,
+            statusText: response.statusText,
+            headers,
+        });
+    }
 
     const oldFetch = unsafeWindow.fetch;
-    unsafeWindow.fetch = function (url) {
+    unsafeWindow.fetch = function () {
+        const args = Array.from(arguments);
         try {
-            const mcdnRegexp = /[xy0-9]+\.mcdn\.bilivideo\.cn:\d+/;
-            const smtcdnsRegexp =
-                /[\w\.]+\.smtcdns.net\/([\w\-]+\.bilivideo.com\/)/;
-            const qualityRegexp = /(live-bvc\/\d+\/live_\d+_\d+)_\w+/;
-            if (mcdnRegexp.test(arguments[0]) && unsafeWindow.disableMcdn) {
-                return Promise.reject();
+            args[0] = preferHighestLiveQuality(args[0]);
+            const url = getRequestUrl(args[0]);
+            if (url) {
+                const rewritten = rewriteLiveMediaUrl(url);
+                if (rewritten.blocked) {
+                    return Promise.reject(new TypeError('Blocked live P2P URL'));
+                }
+                if (rewritten.url !== url) {
+                    args[0] = replaceRequestUrl(args[0], rewritten.url);
+                }
             }
-            if (
-                smtcdnsRegexp.test(arguments[0]) &&
-                unsafeWindow.disableSmtcdns
-            ) {
-                arguments[0] = arguments[0].replace(smtcdnsRegexp, '$1');
-            }
-            if (
-                qualityRegexp.test(arguments[0]) &&
-                unsafeWindow.forceHighestQuality
-            ) {
-                arguments[0] = arguments[0]
-                    .replace(qualityRegexp, '$1')
-                    .replace(/(\d+)_(mini|pro)hevc/g, '$1');
-            }
-            const promise = oldFetch.apply(this, arguments);
-            promise.then((response) => {
-                if (!url.match(/\.(m3u8|m4s)/)) return;
-                if ([403, 404].includes(response.status)) recentErrors++;
+
+            const requestUrl = getRequestUrl(args[0]) || '';
+            return oldFetch.apply(this, args).then(async (response) => {
+                const responseUrl = response.url || requestUrl;
+                if (/\.(m3u8|m4s)(?:[?#]|$)/.test(responseUrl)) {
+                    if ([403, 404].includes(response.status)) recentErrors++;
+                }
                 if (recentErrors >= 5 && unsafeWindow.forceHighestQuality) {
                     recentErrors = 0;
                     unsafeWindow.forceHighestQuality = false;
@@ -284,16 +437,21 @@ if (location.href.startsWith('https://live.bilibili.com/')) {
                         silent: true,
                     });
                 }
-            });
-            return promise;
-        } catch (e) {}
-        return oldFetch.apply(this, arguments);
-    };
+                if (!isLivePlayInfoUrl(requestUrl)) return response;
 
-    // 还得帮叔叔修 bug，唉
-    GM_addStyle(
-        'div[data-cy=EvaRenderer_LayerWrapper]:has(.player) { z-index: 999999; } .fixedPageBackground_root { z-index: 999999 !important; }',
-    );
+                try {
+                    const payload = await response.clone().json();
+                    return livePlayInfoResponse(
+                        response,
+                        disableLiveP2PInPayload(payload),
+                    );
+                } catch (e) {
+                    return response;
+                }
+            });
+        } catch (e) {}
+        return oldFetch.apply(this, args);
+    };
 
     // 干掉些直播间没用的东西
     GM_addStyle(
@@ -382,40 +540,53 @@ function removeTracking(url) {
 // 去掉 B 站的傻逼上报
 !(function () {
     const oldFetch = unsafeWindow.fetch;
-    unsafeWindow.fetch = function (url) {
+    unsafeWindow.fetch = function (input) {
+        const url = getRequestUrl(input);
         if (typeof url === 'string' && url.match(/(?:cm|data)\.bilibili\.com/))
             return new Promise(function () {});
         return oldFetch.apply(this, arguments);
     };
     const oldOpen = unsafeWindow.XMLHttpRequest.prototype.open;
     unsafeWindow.XMLHttpRequest.prototype.open = function (method, url) {
+        const requestUrl = getRequestUrl(url);
         if (
-            typeof url === 'string' &&
-            url.match(/(?:cm|data)\.bilibili\.com/)
+            typeof requestUrl === 'string' &&
+            requestUrl.match(/(?:cm|data)\.bilibili\.com/)
         ) {
             this.send = function () {};
         }
         return oldOpen.apply(this, arguments);
     };
 
-    unsafeWindow.navigator.sendBeacon = () => Promise.resolve();
+    try {
+        Object.defineProperty(unsafeWindow.navigator, 'sendBeacon', {
+            value: () => true,
+            enumerable: false,
+            writable: false,
+            configurable: false,
+        });
+    } catch (e) {
+        unsafeWindow.navigator.sendBeacon = () => true;
+    }
 
-    unsafeWindow.MReporterInstance = new Proxy(function () {}, {
+    const fakeMReporterInstance = new Proxy(function () {}, {
         get(target, prop) {
             debugLog(`MReporterInstance.${prop} called with`, arguments);
             return () => {};
         },
     });
+    defineReadonlyGlobal('MReporterInstance', fakeMReporterInstance);
 
-    unsafeWindow.MReporter = new Proxy(function () {}, {
+    const fakeMReporter = new Proxy(function () {}, {
         construct() {
-            return MReporterInstance;
+            return fakeMReporterInstance;
         },
         get(target, prop) {
             debugLog(`MReporter.${prop} called with`, arguments);
             return () => {};
         },
     });
+    defineReadonlyGlobal('MReporter', fakeMReporter);
 
     const sentryHub = class {
         bindClient() {}
@@ -448,24 +619,27 @@ function removeTracking(url) {
         if (unsafeWindow.Sentry) {
             delete unsafeWindow.Sentry;
         }
-        Object.defineProperty(unsafeWindow, 'Sentry', {
-            value: fakeSentry,
-            enumerable: false,
-            writable: false,
-        });
+        defineReadonlyGlobal('Sentry', fakeSentry);
     }
 
-    unsafeWindow.ReporterPbInstance = new Proxy(function () {}, {
+    const fakeReporterPbInstance = new Proxy(function () {}, {
         get(target, prop) {
             debugLog(`ReporterPbInstance.${prop} called with`, arguments);
             return () => {};
         },
     });
-    unsafeWindow.ReporterPb = new Proxy(function () {}, {
+    defineReadonlyGlobal('ReporterPbInstance', fakeReporterPbInstance);
+
+    const fakeReporterPb = new Proxy(function () {}, {
         construct() {
-            return ReporterPbInstance;
+            return fakeReporterPbInstance;
+        },
+        get(target, prop) {
+            debugLog(`ReporterPb.${prop} called with`, arguments);
+            return () => {};
         },
     });
+    defineReadonlyGlobal('ReporterPb', fakeReporterPb);
 
     Object.defineProperty(unsafeWindow, '__biliUserFp__', {
         get() {
