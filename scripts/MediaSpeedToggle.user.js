@@ -30,6 +30,7 @@
         // 'example.com': RATE_NORMAL,
     });
     const REAPPLY_DEBOUNCE_MS = 120;
+    const MENU_REFRESH_DEBOUNCE_MS = 200;
     const HEAL_INTERVAL_MS = 1500;
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
@@ -68,9 +69,11 @@
     let pageOverrideRate = null;
     let lastUrl = location.href;
     let pendingApply = 0;
+    let pendingMenuRefresh = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
     let menuCommandIds = [];
+    let lastMenuText = '';
     let overlayKeydownHandler = null;
 
     const applyingMap = new WeakMap();
@@ -271,14 +274,38 @@
     }
 
     function refreshMenu() {
+        const menuText = formatMenuText(resolveRate());
+        if (menuText === lastMenuText && menuCommandIds.length > 0) return;
+
         menuCommandIds.forEach((id) => GM_unregisterMenuCommand(id));
         menuCommandIds = [];
+        lastMenuText = menuText;
 
         menuCommandIds.push(
-            GM_registerMenuCommand('MediaSpeedToggle 状态与配置', () => {
+            GM_registerMenuCommand(menuText, () => {
                 showInfoOverlay();
             }),
         );
+    }
+
+    function scheduleMenuRefresh() {
+        if (pendingMenuRefresh) return;
+        pendingMenuRefresh = window.setTimeout(() => {
+            pendingMenuRefresh = 0;
+            refreshMenu();
+        }, MENU_REFRESH_DEBOUNCE_MS);
+    }
+
+    function formatMenuText(decision) {
+        return `MediaSpeedToggle：${formatRate(decision.rate)}（${formatShortReason(decision)}）`;
+    }
+
+    function formatShortReason(decision) {
+        if (decision.reason) return decision.reason;
+
+        if (decision.rule === 'page-override') return '本页临时';
+        if (decision.rule === 'source-site-default') return '站点默认';
+        return '源码默认';
     }
 
     function showInfoOverlay() {
@@ -605,7 +632,10 @@
 
         media.addEventListener(
             'loadedmetadata',
-            () => setMediaRate(media),
+            () => {
+                setMediaRate(media);
+                scheduleMenuRefresh();
+            },
             true,
         );
         media.addEventListener('play', () => setMediaRate(media), true);
@@ -644,7 +674,33 @@
         pendingApply = window.setTimeout(() => {
             pendingApply = 0;
             applyAllRates();
+            refreshMenu();
         }, REAPPLY_DEBOUNCE_MS);
+    }
+
+    function mayAffectPageRule(node) {
+        if (!(node instanceof Element || node instanceof DocumentFragment))
+            return false;
+
+        if (
+            node instanceof Element &&
+            (node.matches(BILIBILI_VIDEO_TAG_SELECTOR) ||
+                node.matches('.ytp-live, .ytp-live-badge') ||
+                node.matches('meta[itemprop="isLiveBroadcast"]'))
+        ) {
+            return true;
+        }
+
+        return Boolean(
+            node.querySelector(
+                [
+                    BILIBILI_VIDEO_TAG_SELECTOR,
+                    '.ytp-live',
+                    '.ytp-live-badge',
+                    'meta[itemprop="isLiveBroadcast"]',
+                ].join(','),
+            ),
+        );
     }
 
     function isEditingTarget(target) {
@@ -720,12 +776,15 @@
 
         const rootObserver = new MutationObserver((mutations) => {
             let changed = false;
+            let ruleMayChange = false;
             mutations.forEach((mutation) => {
                 mutation.addedNodes.forEach((node) => {
                     changed = applyRatesForNode(node) || changed;
+                    ruleMayChange = mayAffectPageRule(node) || ruleMayChange;
                 });
             });
             if (changed) lastIncrementalApplyAt = Date.now();
+            if (ruleMayChange) scheduleApplyAll();
             checkUrlChanged();
         });
         rootObserver.observe(document.documentElement, {
