@@ -11,7 +11,6 @@
 // @license      MIT
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
-// @grant        GM_unregisterMenuCommand
 // ==/UserScript==
 
 (() => {
@@ -32,6 +31,7 @@
     const REAPPLY_DEBOUNCE_MS = 120;
     const MENU_REFRESH_DEBOUNCE_MS = 200;
     const HEAL_INTERVAL_MS = 1500;
+    const MENU_COMMAND_ID = 'dcjanus-media-speed-status';
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
         'a.tag-link[href*="from_source=video_tag"]';
@@ -74,7 +74,6 @@
     let pendingMenuRefresh = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
-    let menuCommandIds = [];
     let lastMenuText = '';
     let overlayKeydownHandler = null;
 
@@ -277,17 +276,15 @@
 
     function refreshMenu() {
         const menuText = formatMenuText(resolveRate());
-        if (menuText === lastMenuText && menuCommandIds.length > 0) return;
-
-        menuCommandIds.forEach((id) => GM_unregisterMenuCommand(id));
-        menuCommandIds = [];
+        if (menuText === lastMenuText) return;
         lastMenuText = menuText;
 
-        menuCommandIds.push(
-            GM_registerMenuCommand(menuText, () => {
-                showInfoOverlay();
-            }),
-        );
+        GM_registerMenuCommand(menuText, () => {
+            showInfoOverlay();
+        }, {
+            id: MENU_COMMAND_ID,
+            title: '查看 MediaSpeedToggle 状态与配置',
+        });
     }
 
     function scheduleMenuRefresh() {
