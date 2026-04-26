@@ -50,6 +50,7 @@
         'VOCALOID·UTAU',
         'UTAU',
         'MV',
+        '华语MV',
         'BGM',
     ]);
     const BILIBILI_DANCE_TAGS = new Set([
