@@ -29,7 +29,6 @@
         // 'example.com': RATE_NORMAL,
     });
     const REAPPLY_DEBOUNCE_MS = 120;
-    const MENU_REFRESH_DEBOUNCE_MS = 200;
     const HEAL_INTERVAL_MS = 1500;
     const MENU_COMMAND_ID = 'dcjanus-media-speed-status';
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
@@ -74,10 +73,9 @@
     let pageOverrideRate = null;
     let lastUrl = location.href;
     let pendingApply = 0;
-    let pendingMenuRefresh = 0;
     let toastTimer = 0;
     let lastIncrementalApplyAt = 0;
-    let lastMenuText = '';
+    let menuRegistered = false;
     let overlayKeydownHandler = null;
 
     const applyingMap = new WeakMap();
@@ -278,12 +276,11 @@
     }
 
     function refreshMenu() {
-        const menuText = formatMenuText(resolveRate());
-        if (menuText === lastMenuText) return;
-        lastMenuText = menuText;
+        if (menuRegistered) return;
+        menuRegistered = true;
 
         GM_registerMenuCommand(
-            menuText,
+            'MediaSpeedToggle 状态与配置',
             () => {
                 showInfoOverlay();
             },
@@ -292,26 +289,6 @@
                 title: '查看 MediaSpeedToggle 状态与配置',
             },
         );
-    }
-
-    function scheduleMenuRefresh() {
-        if (pendingMenuRefresh) return;
-        pendingMenuRefresh = window.setTimeout(() => {
-            pendingMenuRefresh = 0;
-            refreshMenu();
-        }, MENU_REFRESH_DEBOUNCE_MS);
-    }
-
-    function formatMenuText(decision) {
-        return `MediaSpeedToggle：${formatRate(decision.rate)}（${formatShortReason(decision)}）`;
-    }
-
-    function formatShortReason(decision) {
-        if (decision.reason) return decision.reason;
-
-        if (decision.rule === 'page-override') return '本页临时';
-        if (decision.rule === 'source-site-default') return '站点默认';
-        return '源码默认';
     }
 
     function showInfoOverlay() {
@@ -638,10 +615,7 @@
 
         media.addEventListener(
             'loadedmetadata',
-            () => {
-                setMediaRate(media);
-                scheduleMenuRefresh();
-            },
+            () => setMediaRate(media),
             true,
         );
         media.addEventListener('play', () => setMediaRate(media), true);
