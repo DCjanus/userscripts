@@ -6,7 +6,7 @@
 // @description  useful tweaks for bilibili.com
 // @author       kookxiang, DCjanus
 // @match        https://*.bilibili.com/*
-// @icon         https://raw.githubusercontent.com/DCjanus/userscripts/feat/fork-mbga-userscript/assets/bilibili-avatar.svg
+// @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/bilibili-avatar.svg
 // @run-at       document-body
 // @grant        unsafeWindow
 // @grant        GM_addStyle
