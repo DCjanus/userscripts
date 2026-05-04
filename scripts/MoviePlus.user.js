@@ -73,16 +73,18 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     if (!siteList) return;
 
     title = title.trim();
+    const cnSearchKeyword = encodeURIComponent(
+        get_cn_site_search_keyword(title_cn, title),
+    );
     sites = {
-        YIFY: 'https://yts.mx/browse-movies/' + title,
+        爱壹帆: 'https://www.yfsp.tv/search/' + cnSearchKeyword,
         'BTDigg EN':
             'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
         'EXT.TO': 'https://ext.to/browse/?q=' + title,
         独播库:
-            'https://www.duboku.tv/vodsearch/-------------.html?wd=' +
-            title_cn +
-            '&submit=',
+            'https://www.dbku.tv/vodsearch/-------------.html?wd=' +
+            cnSearchKeyword,
         动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
     };
 
@@ -95,6 +97,14 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
         let link = parse_sites(name, sites);
         siteList.append(link);
     }
+}
+
+function get_cn_site_search_keyword(title_cn, title) {
+    const keyword = title_cn.trim();
+    if (!keyword) return title;
+    if (!/[\u4e00-\u9fa5]/.test(keyword)) return keyword;
+
+    return keyword.replace(/\s+[a-zA-Z][\s\S]*$/, '').trim() || keyword;
 }
 
 function update_sub_site(title, douban_ID, IMDb_ID) {
@@ -123,7 +133,7 @@ function parse_sites(name, sites) {
     aTag.href = link;
     aTag.dataset.host = link_parsed.host;
     aTag.target = '_blank';
-    aTag.rel = 'nofollow';
+    aTag.rel = 'noopener noreferrer nofollow';
     aTag.textContent = name;
 
     return aTag;
