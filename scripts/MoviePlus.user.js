@@ -8,14 +8,14 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/douban.svg
-// @version        20260504
+// @version        20260504.1
 // @license        MIT
 // ==/UserScript==
 'use strict';
 
 const myScriptStyle = document.createElement('style');
 myScriptStyle.innerHTML =
-    '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;padding: 0 8px;text-align: center;width: 65px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
+    '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;box-sizing: border-box;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;overflow: hidden;padding: 0 8px;text-align: center;text-overflow: ellipsis;white-space: nowrap;width: 82px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
 myScriptStyle.innerHTML +=
     ' .db-series-link, .db-series-link:link, .db-series-link:visited, .db-series-link:hover, .db-series-link:active { color: inherit !important; text-decoration: none !important; }';
 document.getElementsByTagName('head')[0].appendChild(myScriptStyle);
