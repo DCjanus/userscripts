@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/douban.svg
-// @version        20260504.1
+// @version        20260504
 // @license        MIT
 // ==/UserScript==
 'use strict';
