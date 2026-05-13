@@ -2,7 +2,7 @@
 // @name         DCjanus BiliBili Tweaks
 // @name:zh-CN   DCjanus B 站增强
 // @namespace    https://github.com/dcjanus/userscripts
-// @version      20260426
+// @version      20260512
 // @description  useful tweaks for bilibili.com
 // @author       kookxiang, DCjanus
 // @match        https://*.bilibili.com/*
@@ -117,8 +117,92 @@ GM_addStyle('html, body { font-family: initial !important; }');
 // 首页优化
 if (location.host === 'www.bilibili.com') {
     GM_addStyle(
-        '.feed2 .feed-card:has(a[href*="cm.bilibili.com"]), .feed2 .feed-card:has(.bili-video-card:empty) { display: none } .feed2 .container > * { margin-top: 0 !important }',
+        '.feed2 .feed-card:has(a[href*="cm.bilibili.com"]), .feed2 .feed-card:has(.bili-video-card:empty), .feed2 .feed-card.dcjanus-bili-hidden-ad-card { display: none !important } .feed2 .container > * { margin-top: 0 !important } #dcjanus-bili-ad-filter-status { position: fixed; right: 16px; bottom: 88px; z-index: 10000; padding: 3px 6px; border-radius: 4px; color: #fff; background: rgba(0, 0, 0, .45); font-size: 12px; line-height: 1.2; opacity: .35; pointer-events: auto; user-select: none; transition: opacity .15s ease, background .15s ease; } #dcjanus-bili-ad-filter-status:hover { opacity: .85; background: rgba(0, 0, 0, .65); } #dcjanus-bili-ad-filter-status[hidden] { display: none !important; }',
     );
+
+    const hiddenHomeAdCards = new WeakSet();
+    let hiddenHomeAdCardCount = 0;
+    let renderedHomeAdCardCount = -1;
+    let homeAdFilterScheduled = false;
+
+    function ensureHomeAdFilterStatus() {
+        let status = document.querySelector('#dcjanus-bili-ad-filter-status');
+        if (status) return status;
+
+        status = document.createElement('div');
+        status.id = 'dcjanus-bili-ad-filter-status';
+        status.hidden = true;
+        status.setAttribute('role', 'status');
+        status.setAttribute('aria-live', 'polite');
+        document.body.appendChild(status);
+        return status;
+    }
+
+    function updateHomeAdFilterStatus() {
+        if (renderedHomeAdCardCount === hiddenHomeAdCardCount) return;
+        renderedHomeAdCardCount = hiddenHomeAdCardCount;
+
+        if (hiddenHomeAdCardCount === 0) {
+            const status = document.querySelector(
+                '#dcjanus-bili-ad-filter-status',
+            );
+            if (status) status.hidden = true;
+            return;
+        }
+
+        const status = ensureHomeAdFilterStatus();
+        status.hidden = false;
+        status.textContent = `AD ${hiddenHomeAdCardCount}`;
+        status.title = `已过滤 ${hiddenHomeAdCardCount} 个首页广告`;
+        status.setAttribute(
+            'aria-label',
+            `已过滤 ${hiddenHomeAdCardCount} 个首页广告`,
+        );
+    }
+
+    function isHomeFeedAdCard(card) {
+        if (card.querySelector('a[href*="cm.bilibili.com"]')) return true;
+        if (card.querySelector('.bili-video-card:empty')) return true;
+
+        const videoCard = card.querySelector('.bili-video-card');
+        if (!videoCard) return false;
+
+        const hasMiniProgramAction = videoCard.textContent.includes('去小程序');
+        const hasVideoEntry = card.querySelector(
+            'a[href*="/video/"], a[href*="/bangumi/play/"], a[href*="live.bilibili.com"]',
+        );
+        const title = videoCard.querySelector('.bili-video-card__info--tit');
+        const titleLink = title?.querySelector('a[href]');
+
+        return hasMiniProgramAction && title && !titleLink && !hasVideoEntry;
+    }
+
+    function hideHomeFeedAdCards() {
+        homeAdFilterScheduled = false;
+
+        document.querySelectorAll('.feed2 .feed-card').forEach((card) => {
+            if (hiddenHomeAdCards.has(card)) return;
+            if (!isHomeFeedAdCard(card)) return;
+
+            hiddenHomeAdCards.add(card);
+            hiddenHomeAdCardCount += 1;
+            card.classList.add('dcjanus-bili-hidden-ad-card');
+        });
+
+        updateHomeAdFilterStatus();
+    }
+
+    function scheduleHomeFeedAdFilter() {
+        if (homeAdFilterScheduled) return;
+        homeAdFilterScheduled = true;
+        requestAnimationFrame(hideHomeFeedAdCards);
+    }
+
+    scheduleHomeFeedAdFilter();
+    new MutationObserver(scheduleHomeFeedAdFilter).observe(document.body, {
+        childList: true,
+        subtree: true,
+    });
 }
 
 // 动态页面优化

@@ -7,7 +7,7 @@
 // @match        https://*/*
 // @match        http://*/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/media-speed-toggle.svg
-// @version      20260426
+// @version      20260507
 // @license      MIT
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
@@ -34,6 +34,14 @@
     const OVERLAY_ID = 'dcjanus-media-speed-overlay';
     const BILIBILI_VIDEO_TAG_SELECTOR =
         '.video-tag-container a.tag-link, a.tag-link[href*="from_source=video_tag"]';
+    const BILIBILI_ASMR_TAGS = new Set([
+        '助眠',
+        '催眠',
+        '耳语',
+        '触发音',
+        '采耳',
+        '耳搔',
+    ]);
     const BILIBILI_MUSIC_TAGS = new Set([
         '音乐',
         '音乐现场',
@@ -240,6 +248,18 @@
         if (!isBilibiliHost()) return false;
 
         const pageTags = collectBilibiliVideoTags();
+        const asmrTags = pageTags.filter(isBilibiliAsmrTag);
+        if (asmrTags.length > 0) {
+            return {
+                rate: RATE_NORMAL,
+                source: '页面规则',
+                reason: 'B 站 ASMR',
+                rule: 'bilibili-asmr-tags',
+                pageTags,
+                matchedTags: asmrTags,
+            };
+        }
+
         const musicTags = pageTags.filter((tag) =>
             BILIBILI_MUSIC_TAGS.has(tag),
         );
@@ -269,6 +289,12 @@
         }
 
         return null;
+    }
+
+    function isBilibiliAsmrTag(tag) {
+        return (
+            tag.toLowerCase().includes('asmr') || BILIBILI_ASMR_TAGS.has(tag)
+        );
     }
 
     function collectBilibiliVideoTags() {
@@ -482,6 +508,10 @@
             ['YouTube 直播', '/live/、直播媒体、直播元信息或可见直播标记'],
             ['B 站直播', 'hostname 为 live.bilibili.com'],
             ['B 站视频 tag 选择器', BILIBILI_VIDEO_TAG_SELECTOR],
+            [
+                'B 站 ASMR tag',
+                `包含 ASMR 或 ${formatList(Array.from(BILIBILI_ASMR_TAGS))}`,
+            ],
             ['B 站音乐 tag', formatList(Array.from(BILIBILI_MUSIC_TAGS))],
             ['B 站舞蹈 tag', formatList(Array.from(BILIBILI_DANCE_TAGS))],
         ]);
