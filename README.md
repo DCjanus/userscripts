@@ -14,7 +14,7 @@
 | [BiliTab.user.js](scripts/BiliTab.user.js) | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
 | [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js) | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
 | [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js) | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
-| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页滚轮翻页 | 不发布到 GreasyFork |
+| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页长图查看 | 不发布到 GreasyFork |
 | [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js) | 全站视频 1x/3x 快捷切换，支持全局/站点/页面规则 | 不发布到 GreasyFork |
 | [BiliBiliTweaks.user.js](scripts/BiliBiliTweaks.user.js) | B 站辅助脚本，自维护 fork | 不发布到 GreasyFork |
 
