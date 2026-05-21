@@ -187,12 +187,13 @@ function updateWeeklySegments(progressHost) {
         for (let day = 1; day < WEEK_DAYS; day += 1) {
             const divider = document.createElement('span');
             divider.style.position = 'absolute';
-            divider.style.top = '-3px';
-            divider.style.bottom = '-3px';
+            divider.style.top = '-5px';
+            divider.style.bottom = '-5px';
             divider.style.left = `${(day / WEEK_DAYS) * 100}%`;
-            divider.style.width = '1px';
-            divider.style.transform = 'translateX(-0.5px)';
-            divider.style.backgroundColor = 'rgba(202, 138, 4, 0.28)';
+            divider.style.width = '2px';
+            divider.style.transform = 'translateX(-1px)';
+            divider.style.backgroundColor = 'rgba(202, 138, 4, 0.55)';
+            divider.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.7)';
             segments.appendChild(divider);
         }
         progressHost.appendChild(segments);
@@ -210,7 +211,12 @@ function getWeekDayIndex(resetDate, now) {
     return Math.max(0, Math.min(WEEK_DAYS - 1, rawIndex));
 }
 
-function updateWeeklyDayMarker(progressHost, resetDate, now) {
+function updateWeeklyDayMarker(
+    progressHost,
+    resetDate,
+    now,
+    timeRemainingPercent,
+) {
     updateWeeklySegments(progressHost);
 
     let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
@@ -221,7 +227,7 @@ function updateWeeklyDayMarker(progressHost, resetDate, now) {
     }
 
     const dayIndex = getWeekDayIndex(resetDate, now);
-    const left = `${((dayIndex + 0.5) / WEEK_DAYS) * 100}%`;
+    const left = `${clampPercent(timeRemainingPercent)}%`;
     const title = `每周窗口：当前第 ${dayIndex + 1} 天 / 共 ${WEEK_DAYS} 天`;
     setStyleValue(marker, 'position', 'absolute');
     setStyleValue(marker, 'top', 'calc(100% + 4px)');
@@ -229,12 +235,12 @@ function updateWeeklyDayMarker(progressHost, resetDate, now) {
     setStyleValue(marker, 'left', left);
     setStyleValue(marker, 'width', '0');
     setStyleValue(marker, 'height', '0');
-    setStyleValue(marker, 'borderLeft', '5px solid transparent');
-    setStyleValue(marker, 'borderRight', '5px solid transparent');
-    setStyleValue(marker, 'borderBottom', `7px solid ${MARKER_COLOR}`);
+    setStyleValue(marker, 'borderLeft', '6px solid transparent');
+    setStyleValue(marker, 'borderRight', '6px solid transparent');
+    setStyleValue(marker, 'borderBottom', `8px solid ${MARKER_COLOR}`);
     setStyleValue(marker, 'borderRadius', '');
     setStyleValue(marker, 'pointerEvents', 'none');
-    setStyleValue(marker, 'transform', 'translateX(-5px)');
+    setStyleValue(marker, 'transform', 'translateX(-6px)');
     setStyleValue(marker, 'backgroundColor', 'transparent');
     setStyleValue(marker, 'boxShadow', '');
     if (marker.title !== title) {
@@ -268,7 +274,12 @@ function updateArticle(article, now) {
     }
 
     if (windowMs === WINDOW_WEEK_MS) {
-        updateWeeklyDayMarker(progressHost, resetDate, now);
+        updateWeeklyDayMarker(
+            progressHost,
+            resetDate,
+            now,
+            timeRemainingPercent,
+        );
     } else {
         updateContinuousTimeMarker(progressHost, timeRemainingPercent);
     }
