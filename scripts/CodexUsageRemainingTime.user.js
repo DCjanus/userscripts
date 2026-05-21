@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         CodexUsageRemainingTime
-// @name:zh-CN   Codex 用量窗口节奏提示
+// @name:zh-CN   Codex 用量窗口时间刻度
 // @namespace    https://github.com/DCjanus/userscripts
-// @description  在 Codex 分析页展示用量窗口剩余时间，并标出额度消耗是否快于时间进度
+// @description  在 Codex 分析页的用量进度条上标出时间窗口剩余位置
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/cloud/settings/analytics
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
@@ -13,7 +13,6 @@
 
 const SCRIPT_NAME = 'CodexUsageRemainingTime';
 const RESET_PREFIX = '重置时间：';
-const PACE_LINE_ATTR = 'data-codex-usage-pace-line';
 const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
 const UPDATE_INTERVAL_MS = 30 * 1000;
 const WINDOW_FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
@@ -70,26 +69,6 @@ function parseResetDate(resetText, now) {
     return null;
 }
 
-function formatDuration(ms) {
-    if (ms <= 0) {
-        return '已重置';
-    }
-
-    const totalMinutes = Math.floor(ms / 60000);
-    const minutes = totalMinutes % 60;
-    const totalHours = Math.floor(totalMinutes / 60);
-    const hours = totalHours % 24;
-    const days = Math.floor(totalHours / 24);
-
-    if (days > 0) {
-        return `${days}天${hours}小时${minutes}分钟`;
-    }
-    if (hours > 0) {
-        return `${hours}小时${minutes}分钟`;
-    }
-    return `${minutes}分钟`;
-}
-
 function clampPercent(value) {
     return Math.max(0, Math.min(100, value));
 }
@@ -109,33 +88,17 @@ function getArticleTitle(article) {
     return normalizeText(titleNode?.textContent);
 }
 
-function parseQuotaRemainingPercent(article) {
-    const match = normalizeText(article.textContent).match(/(\d{1,3})%\s*剩余/);
-    if (!match) {
-        return null;
-    }
-    return clampPercent(Number(match[1]));
-}
-
 function findResetElement(article) {
     const elements = Array.from(article.querySelectorAll('*')).filter(
-        (element) => {
-            if (element.hasAttribute(PACE_LINE_ATTR)) {
-                return false;
-            }
-            return normalizeText(element.textContent).startsWith(RESET_PREFIX);
-        },
+        (element) =>
+            normalizeText(element.textContent).startsWith(RESET_PREFIX),
     );
 
     return (
         elements.find(
             (element) =>
-                !Array.from(element.children).some(
-                    (child) =>
-                        !child.hasAttribute(PACE_LINE_ATTR) &&
-                        normalizeText(child.textContent).startsWith(
-                            RESET_PREFIX,
-                        ),
+                !Array.from(element.children).some((child) =>
+                    normalizeText(child.textContent).startsWith(RESET_PREFIX),
                 ),
         ) || null
     );
@@ -154,9 +117,6 @@ function extractResetText(resetElement) {
         if (child.nodeType !== Node.ELEMENT_NODE) {
             continue;
         }
-        if (child.hasAttribute(PACE_LINE_ATTR)) {
-            continue;
-        }
         const text = normalizeText(child.textContent);
         if (text.startsWith(RESET_PREFIX)) {
             return text;
@@ -169,16 +129,6 @@ function extractResetText(resetElement) {
     return fallback ? `${RESET_PREFIX}${fallback[1]}` : '';
 }
 
-function findResetLine(resetElement) {
-    const parent = resetElement.parentElement;
-    if (!parent) {
-        return resetElement;
-    }
-    return normalizeText(parent.textContent).startsWith(RESET_PREFIX)
-        ? parent
-        : resetElement;
-}
-
 function findProgressHost(article) {
     return (
         Array.from(article.querySelectorAll('div')).find(
@@ -189,30 +139,7 @@ function findProgressHost(article) {
     );
 }
 
-function describePace(quotaRemainingPercent, timeRemainingPercent) {
-    const diff = Math.round(quotaRemainingPercent - timeRemainingPercent);
-    if (diff > 0) {
-        return {
-            text: `用量偏慢 ${diff}pp`,
-            color: '#16a34a',
-            markerColor: 'rgba(22, 163, 74, 0.9)',
-        };
-    }
-    if (diff < 0) {
-        return {
-            text: `用量偏快 ${Math.abs(diff)}pp`,
-            color: '#ca8a04',
-            markerColor: 'rgba(202, 138, 4, 0.95)',
-        };
-    }
-    return {
-        text: '节奏持平',
-        color: 'inherit',
-        markerColor: 'rgba(107, 114, 128, 0.85)',
-    };
-}
-
-function updateTimeMarker(progressHost, timeRemainingPercent, paceInfo) {
+function updateTimeMarker(progressHost, timeRemainingPercent) {
     let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
     if (!marker) {
         marker = document.createElement('span');
@@ -233,42 +160,11 @@ function updateTimeMarker(progressHost, timeRemainingPercent, paceInfo) {
     if (marker.style.left !== left) {
         marker.style.left = left;
     }
-    if (marker.style.backgroundColor !== paceInfo.markerColor) {
-        marker.style.backgroundColor = paceInfo.markerColor;
+    if (marker.style.backgroundColor !== 'rgb(202, 138, 4)') {
+        marker.style.backgroundColor = '#ca8a04';
     }
     if (marker.title !== title) {
         marker.title = title;
-    }
-}
-
-function updatePaceLine(
-    resetLine,
-    timeRemainingPercent,
-    remainingMs,
-    paceInfo,
-) {
-    if (resetLine.style.flexWrap !== 'wrap') {
-        resetLine.style.flexWrap = 'wrap';
-    }
-
-    let line = resetLine.querySelector(`span[${PACE_LINE_ATTR}="true"]`);
-    if (!line) {
-        line = document.createElement('span');
-        line.setAttribute(PACE_LINE_ATTR, 'true');
-        line.className = 'text-token-text-tertiary';
-        line.style.flexBasis = '100%';
-        line.style.marginTop = '4px';
-        line.style.fontWeight = '500';
-        resetLine.appendChild(line);
-    }
-
-    const timeText = `${Math.round(timeRemainingPercent)}%（${formatDuration(remainingMs)}）`;
-    const lineText = `时间剩余：${timeText} · ${paceInfo.text}`;
-    if (line.textContent !== lineText) {
-        line.textContent = lineText;
-    }
-    if (line.style.color !== paceInfo.color) {
-        line.style.color = paceInfo.color;
     }
 }
 
@@ -276,11 +172,6 @@ function updateArticle(article, now) {
     const title = getArticleTitle(article);
     const windowMs = getWindowMs(title);
     if (!windowMs) {
-        return;
-    }
-
-    const quotaRemainingPercent = parseQuotaRemainingPercent(article);
-    if (quotaRemainingPercent === null) {
         return;
     }
 
@@ -296,19 +187,11 @@ function updateArticle(article, now) {
 
     const remainingMs = resetDate.getTime() - now.getTime();
     const timeRemainingPercent = clampPercent((remainingMs / windowMs) * 100);
-    const paceInfo = describePace(quotaRemainingPercent, timeRemainingPercent);
 
     const progressHost = findProgressHost(article);
     if (progressHost) {
-        updateTimeMarker(progressHost, timeRemainingPercent, paceInfo);
+        updateTimeMarker(progressHost, timeRemainingPercent);
     }
-
-    updatePaceLine(
-        findResetLine(resetElement),
-        timeRemainingPercent,
-        remainingMs,
-        paceInfo,
-    );
 }
 
 function updateAllCards() {
