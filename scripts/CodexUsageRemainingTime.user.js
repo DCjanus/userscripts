@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/cloud/settings/analytics
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
-// @version      20260521.2
+// @version      20260521
 // @license      MIT
 // ==/UserScript==
 'use strict';
