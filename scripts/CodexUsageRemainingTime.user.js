@@ -5,7 +5,6 @@
 // @description  在 Codex 分析页展示用量窗口剩余时间，并标出额度消耗是否快于时间进度
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/cloud/settings/analytics
-// @match        https://chatgpt.com/codex/settings/usage
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
 // @version      20260521
 // @license      MIT
