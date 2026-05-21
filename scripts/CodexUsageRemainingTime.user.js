@@ -1,57 +1,63 @@
 // ==UserScript==
 // @name         CodexUsageRemainingTime
-// @name:zh-CN   Codex 用量窗口剩余时间
+// @name:zh-CN   Codex 用量窗口节奏提示
 // @namespace    https://github.com/DCjanus/userscripts
-// @description  在 Codex 用量页面展示每个用量窗口剩余时间
+// @description  在 Codex 分析页展示用量窗口剩余时间，并标出额度消耗是否快于时间进度
 // @author       DCjanus
+// @match        https://chatgpt.com/codex/cloud/settings/analytics
 // @match        https://chatgpt.com/codex/settings/usage
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
-// @version      20251226
+// @version      20260521
 // @license      MIT
 // ==/UserScript==
 'use strict';
 
 const SCRIPT_NAME = 'CodexUsageRemainingTime';
 const RESET_PREFIX = '重置时间：';
-const REMAINING_ATTR = 'data-codex-remaining-time';
+const PACE_LINE_ATTR = 'data-codex-usage-pace-line';
+const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
 const UPDATE_INTERVAL_MS = 30 * 1000;
 const WINDOW_FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const WINDOW_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-function parseResetDate(text, now) {
-    const raw = text.trim().replace(/\s+/g, ' ');
+function normalizeText(text) {
+    return (text || '').replace(/\s+/g, ' ').trim();
+}
+
+function parseResetDate(resetText, now) {
+    const raw = normalizeText(resetText);
     if (!raw.startsWith(RESET_PREFIX)) {
         return null;
     }
+
     const value = raw.slice(RESET_PREFIX.length).trim();
     if (!value) {
         return null;
     }
 
-    // 长格式：2025年12月26日 10:52
     const fullMatch = value.match(
         /^(\d{4})年(\d{1,2})月(\d{1,2})日\s+(\d{1,2}):(\d{2})$/,
     );
     if (fullMatch) {
-        const year = Number(fullMatch[1]);
-        const month = Number(fullMatch[2]) - 1;
-        const day = Number(fullMatch[3]);
-        const hour = Number(fullMatch[4]);
-        const minute = Number(fullMatch[5]);
-        return new Date(year, month, day, hour, minute, 0, 0);
+        return new Date(
+            Number(fullMatch[1]),
+            Number(fullMatch[2]) - 1,
+            Number(fullMatch[3]),
+            Number(fullMatch[4]),
+            Number(fullMatch[5]),
+            0,
+            0,
+        );
     }
 
-    // 短格式：20:52，默认今天；若已过去则滚到明天
     const shortMatch = value.match(/^(\d{1,2}):(\d{2})$/);
     if (shortMatch) {
-        const hour = Number(shortMatch[1]);
-        const minute = Number(shortMatch[2]);
         const candidate = new Date(
             now.getFullYear(),
             now.getMonth(),
             now.getDate(),
-            hour,
-            minute,
+            Number(shortMatch[1]),
+            Number(shortMatch[2]),
             0,
             0,
         );
@@ -68,6 +74,7 @@ function formatDuration(ms) {
     if (ms <= 0) {
         return '已重置';
     }
+
     const totalMinutes = Math.floor(ms / 60000);
     const minutes = totalMinutes % 60;
     const totalHours = Math.floor(totalMinutes / 60);
@@ -83,79 +90,232 @@ function formatDuration(ms) {
     return `${minutes}分钟`;
 }
 
-function getWindowMs(span) {
-    const article = span.closest('article');
-    if (!article) {
-        return null;
+function clampPercent(value) {
+    return Math.max(0, Math.min(100, value));
+}
+
+function getWindowMs(title) {
+    if (title.includes('5') && title.includes('小时')) {
+        return WINDOW_FIVE_HOURS_MS;
     }
-    const titles = Array.from(article.querySelectorAll('p')).map((node) =>
-        (node.textContent || '').trim(),
-    );
-    for (const title of titles) {
-        if (title.includes('5') && title.includes('小时')) {
-            return WINDOW_FIVE_HOURS_MS;
-        }
-        if (title.includes('每周')) {
-            return WINDOW_WEEK_MS;
-        }
+    if (title.includes('每周')) {
+        return WINDOW_WEEK_MS;
     }
     return null;
 }
 
-function formatRemainingPercent(remainingMs, windowMs) {
-    if (!windowMs || windowMs <= 0) {
-        return '';
-    }
-    const ratio = Math.max(0, Math.min(1, remainingMs / windowMs));
-    const percent = Math.round(ratio * 100);
-    return `（${percent}%）`;
+function getArticleTitle(article) {
+    const titleNode = article.querySelector('p');
+    return normalizeText(titleNode?.textContent);
 }
 
-function updateRemainingForSpan(span) {
-    const now = new Date();
-    const resetDate = parseResetDate(span.textContent || '', now);
+function parseQuotaRemainingPercent(article) {
+    const match = normalizeText(article.textContent).match(/(\d{1,3})%\s*剩余/);
+    if (!match) {
+        return null;
+    }
+    return clampPercent(Number(match[1]));
+}
+
+function findResetElement(article) {
+    const elements = Array.from(article.querySelectorAll('*')).filter(
+        (element) => {
+            if (element.hasAttribute(PACE_LINE_ATTR)) {
+                return false;
+            }
+            return normalizeText(element.textContent).startsWith(RESET_PREFIX);
+        },
+    );
+
+    return (
+        elements.find(
+            (element) =>
+                !Array.from(element.children).some(
+                    (child) =>
+                        !child.hasAttribute(PACE_LINE_ATTR) &&
+                        normalizeText(child.textContent).startsWith(
+                            RESET_PREFIX,
+                        ),
+                ),
+        ) || null
+    );
+}
+
+function extractResetText(resetElement) {
+    for (const child of resetElement.childNodes) {
+        if (child.nodeType === Node.TEXT_NODE) {
+            const text = normalizeText(child.textContent);
+            if (text.startsWith(RESET_PREFIX)) {
+                return text;
+            }
+            continue;
+        }
+
+        if (child.nodeType !== Node.ELEMENT_NODE) {
+            continue;
+        }
+        if (child.hasAttribute(PACE_LINE_ATTR)) {
+            continue;
+        }
+        const text = normalizeText(child.textContent);
+        if (text.startsWith(RESET_PREFIX)) {
+            return text;
+        }
+    }
+
+    const fallback = normalizeText(resetElement.textContent).match(
+        /重置时间：\s*(\d{4}年\d{1,2}月\d{1,2}日\s+\d{1,2}:\d{2}|\d{1,2}:\d{2})/,
+    );
+    return fallback ? `${RESET_PREFIX}${fallback[1]}` : '';
+}
+
+function findResetLine(resetElement) {
+    const parent = resetElement.parentElement;
+    if (!parent) {
+        return resetElement;
+    }
+    return normalizeText(parent.textContent).startsWith(RESET_PREFIX)
+        ? parent
+        : resetElement;
+}
+
+function findProgressHost(article) {
+    return (
+        Array.from(article.querySelectorAll('div')).find(
+            (element) =>
+                element.classList.contains('relative') &&
+                element.classList.contains('w-full'),
+        ) || null
+    );
+}
+
+function describePace(quotaRemainingPercent, timeRemainingPercent) {
+    const diff = Math.round(quotaRemainingPercent - timeRemainingPercent);
+    if (diff > 0) {
+        return {
+            text: `用量偏慢 ${diff}pp`,
+            color: '#16a34a',
+            markerColor: 'rgba(22, 163, 74, 0.9)',
+        };
+    }
+    if (diff < 0) {
+        return {
+            text: `用量偏快 ${Math.abs(diff)}pp`,
+            color: '#ca8a04',
+            markerColor: 'rgba(202, 138, 4, 0.95)',
+        };
+    }
+    return {
+        text: '节奏持平',
+        color: 'inherit',
+        markerColor: 'rgba(107, 114, 128, 0.85)',
+    };
+}
+
+function updateTimeMarker(progressHost, timeRemainingPercent, paceInfo) {
+    let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
+    if (!marker) {
+        marker = document.createElement('span');
+        marker.setAttribute(TIME_MARKER_ATTR, 'true');
+        marker.style.position = 'absolute';
+        marker.style.top = '-3px';
+        marker.style.bottom = '-3px';
+        marker.style.width = '2px';
+        marker.style.borderRadius = '999px';
+        marker.style.pointerEvents = 'none';
+        marker.style.transform = 'translateX(-1px)';
+        marker.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.75)';
+        progressHost.appendChild(marker);
+    }
+
+    marker.style.left = `${clampPercent(timeRemainingPercent)}%`;
+    marker.style.backgroundColor = paceInfo.markerColor;
+    marker.title = `时间窗口剩余 ${Math.round(timeRemainingPercent)}%`;
+}
+
+function updatePaceLine(
+    resetLine,
+    timeRemainingPercent,
+    remainingMs,
+    paceInfo,
+) {
+    resetLine.style.flexWrap = 'wrap';
+
+    let line = resetLine.querySelector(`span[${PACE_LINE_ATTR}="true"]`);
+    if (!line) {
+        line = document.createElement('span');
+        line.setAttribute(PACE_LINE_ATTR, 'true');
+        line.className = 'text-token-text-tertiary';
+        line.style.flexBasis = '100%';
+        line.style.marginTop = '4px';
+        line.style.fontWeight = '500';
+        resetLine.appendChild(line);
+    }
+
+    const timeText = `${Math.round(timeRemainingPercent)}%（${formatDuration(remainingMs)}）`;
+    line.textContent = `时间剩余：${timeText} · ${paceInfo.text}`;
+    line.style.color = paceInfo.color;
+}
+
+function updateArticle(article, now) {
+    const title = getArticleTitle(article);
+    const windowMs = getWindowMs(title);
+    if (!windowMs) {
+        return;
+    }
+
+    const quotaRemainingPercent = parseQuotaRemainingPercent(article);
+    if (quotaRemainingPercent === null) {
+        return;
+    }
+
+    const resetElement = findResetElement(article);
+    if (!resetElement) {
+        return;
+    }
+
+    const resetDate = parseResetDate(extractResetText(resetElement), now);
     if (!resetDate) {
         return;
     }
-    const remainingMs = resetDate.getTime() - now.getTime();
-    const remainingText = formatDuration(remainingMs);
 
-    let remainingNode = span.querySelector(`span[${REMAINING_ATTR}="true"]`);
-    if (!remainingNode) {
-        remainingNode = document.createElement('span');
-        remainingNode.setAttribute(REMAINING_ATTR, 'true');
-        remainingNode.style.marginLeft = '8px';
-        remainingNode.style.fontWeight = '500';
-        remainingNode.style.color = 'inherit';
-        span.appendChild(remainingNode);
+    const remainingMs = resetDate.getTime() - now.getTime();
+    const timeRemainingPercent = clampPercent((remainingMs / windowMs) * 100);
+    const paceInfo = describePace(quotaRemainingPercent, timeRemainingPercent);
+
+    const progressHost = findProgressHost(article);
+    if (progressHost) {
+        updateTimeMarker(progressHost, timeRemainingPercent, paceInfo);
     }
-    const windowMs = getWindowMs(span);
-    const percentText = formatRemainingPercent(remainingMs, windowMs);
-    remainingNode.textContent = `剩余：${remainingText}${percentText}`;
+
+    updatePaceLine(
+        findResetLine(resetElement),
+        timeRemainingPercent,
+        remainingMs,
+        paceInfo,
+    );
 }
 
-function updateAllRemaining() {
-    const spans = document.querySelectorAll('span');
-    for (const span of spans) {
-        const text = span.textContent || '';
-        if (!text.includes(RESET_PREFIX)) {
-            continue;
-        }
-        updateRemainingForSpan(span);
+function updateAllCards() {
+    const now = new Date();
+    for (const article of document.querySelectorAll('article')) {
+        updateArticle(article, now);
     }
 }
 
 function observeAndUpdate() {
-    updateAllRemaining();
+    updateAllCards();
+
     const observer = new MutationObserver(() => {
-        updateAllRemaining();
+        updateAllCards();
     });
     observer.observe(document.body, {
         childList: true,
         subtree: true,
         characterData: true,
     });
-    setInterval(updateAllRemaining, UPDATE_INTERVAL_MS);
+
+    setInterval(updateAllCards, UPDATE_INTERVAL_MS);
 }
 
 function main() {
