@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/cloud/settings/analytics
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
-// @version      20260521
+// @version      20260521.1
 // @license      MIT
 // ==/UserScript==
 'use strict';
@@ -14,9 +14,12 @@
 const SCRIPT_NAME = 'CodexUsageRemainingTime';
 const RESET_PREFIX = '重置时间：';
 const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
+const WEEK_SEGMENTS_ATTR = 'data-codex-usage-week-segments';
+const MARKER_COLOR = 'rgb(202, 138, 4)';
 const UPDATE_INTERVAL_MS = 30 * 1000;
 const WINDOW_FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const WINDOW_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WEEK_DAYS = 7;
 let updateScheduled = false;
 
 function normalizeText(text) {
@@ -139,30 +142,101 @@ function findProgressHost(article) {
     );
 }
 
-function updateTimeMarker(progressHost, timeRemainingPercent) {
+function setStyleValue(element, property, value) {
+    if (element.style[property] !== value) {
+        element.style[property] = value;
+    }
+}
+
+function updateContinuousTimeMarker(progressHost, timeRemainingPercent) {
     let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
     if (!marker) {
         marker = document.createElement('span');
         marker.setAttribute(TIME_MARKER_ATTR, 'true');
-        marker.style.position = 'absolute';
-        marker.style.top = '-3px';
-        marker.style.bottom = '-3px';
-        marker.style.width = '2px';
-        marker.style.borderRadius = '999px';
-        marker.style.pointerEvents = 'none';
-        marker.style.transform = 'translateX(-1px)';
-        marker.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.75)';
         progressHost.appendChild(marker);
     }
 
     const left = `${clampPercent(timeRemainingPercent)}%`;
     const title = `时间窗口剩余 ${Math.round(timeRemainingPercent)}%`;
-    if (marker.style.left !== left) {
-        marker.style.left = left;
+    setStyleValue(marker, 'position', 'absolute');
+    setStyleValue(marker, 'top', '-3px');
+    setStyleValue(marker, 'bottom', '-3px');
+    setStyleValue(marker, 'left', left);
+    setStyleValue(marker, 'width', '2px');
+    setStyleValue(marker, 'height', '');
+    setStyleValue(marker, 'borderLeft', '');
+    setStyleValue(marker, 'borderRight', '');
+    setStyleValue(marker, 'borderBottom', '');
+    setStyleValue(marker, 'borderRadius', '999px');
+    setStyleValue(marker, 'pointerEvents', 'none');
+    setStyleValue(marker, 'transform', 'translateX(-1px)');
+    setStyleValue(marker, 'backgroundColor', MARKER_COLOR);
+    setStyleValue(marker, 'boxShadow', '0 0 0 1px rgba(255, 255, 255, 0.75)');
+    if (marker.title !== title) {
+        marker.title = title;
     }
-    if (marker.style.backgroundColor !== 'rgb(202, 138, 4)') {
-        marker.style.backgroundColor = '#ca8a04';
+}
+
+function updateWeeklySegments(progressHost) {
+    let segments = progressHost.querySelector(
+        `span[${WEEK_SEGMENTS_ATTR}="true"]`,
+    );
+    if (!segments) {
+        segments = document.createElement('span');
+        segments.setAttribute(WEEK_SEGMENTS_ATTR, 'true');
+        for (let day = 1; day < WEEK_DAYS; day += 1) {
+            const divider = document.createElement('span');
+            divider.style.position = 'absolute';
+            divider.style.top = '-3px';
+            divider.style.bottom = '-3px';
+            divider.style.left = `${(day / WEEK_DAYS) * 100}%`;
+            divider.style.width = '1px';
+            divider.style.transform = 'translateX(-0.5px)';
+            divider.style.backgroundColor = 'rgba(202, 138, 4, 0.28)';
+            segments.appendChild(divider);
+        }
+        progressHost.appendChild(segments);
     }
+
+    setStyleValue(segments, 'position', 'absolute');
+    setStyleValue(segments, 'inset', '0');
+    setStyleValue(segments, 'pointerEvents', 'none');
+}
+
+function getWeekDayIndex(resetDate, now) {
+    const windowStartMs = resetDate.getTime() - WINDOW_WEEK_MS;
+    const elapsedMs = now.getTime() - windowStartMs;
+    const rawIndex = Math.floor((elapsedMs / WINDOW_WEEK_MS) * WEEK_DAYS);
+    return Math.max(0, Math.min(WEEK_DAYS - 1, rawIndex));
+}
+
+function updateWeeklyDayMarker(progressHost, resetDate, now) {
+    updateWeeklySegments(progressHost);
+
+    let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
+    if (!marker) {
+        marker = document.createElement('span');
+        marker.setAttribute(TIME_MARKER_ATTR, 'true');
+        progressHost.appendChild(marker);
+    }
+
+    const dayIndex = getWeekDayIndex(resetDate, now);
+    const left = `${((dayIndex + 0.5) / WEEK_DAYS) * 100}%`;
+    const title = `每周窗口：当前第 ${dayIndex + 1} 天 / 共 ${WEEK_DAYS} 天`;
+    setStyleValue(marker, 'position', 'absolute');
+    setStyleValue(marker, 'top', 'calc(100% + 4px)');
+    setStyleValue(marker, 'bottom', '');
+    setStyleValue(marker, 'left', left);
+    setStyleValue(marker, 'width', '0');
+    setStyleValue(marker, 'height', '0');
+    setStyleValue(marker, 'borderLeft', '5px solid transparent');
+    setStyleValue(marker, 'borderRight', '5px solid transparent');
+    setStyleValue(marker, 'borderBottom', `7px solid ${MARKER_COLOR}`);
+    setStyleValue(marker, 'borderRadius', '');
+    setStyleValue(marker, 'pointerEvents', 'none');
+    setStyleValue(marker, 'transform', 'translateX(-5px)');
+    setStyleValue(marker, 'backgroundColor', 'transparent');
+    setStyleValue(marker, 'boxShadow', '');
     if (marker.title !== title) {
         marker.title = title;
     }
@@ -189,8 +263,14 @@ function updateArticle(article, now) {
     const timeRemainingPercent = clampPercent((remainingMs / windowMs) * 100);
 
     const progressHost = findProgressHost(article);
-    if (progressHost) {
-        updateTimeMarker(progressHost, timeRemainingPercent);
+    if (!progressHost) {
+        return;
+    }
+
+    if (windowMs === WINDOW_WEEK_MS) {
+        updateWeeklyDayMarker(progressHost, resetDate, now);
+    } else {
+        updateContinuousTimeMarker(progressHost, timeRemainingPercent);
     }
 }
 
