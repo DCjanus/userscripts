@@ -14,9 +14,12 @@
 const SCRIPT_NAME = 'CodexUsageRemainingTime';
 const RESET_PREFIX = '重置时间：';
 const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
+const WEEK_SEGMENTS_ATTR = 'data-codex-usage-week-segments';
+const MARKER_COLOR = 'rgb(217, 119, 6)';
+const SEGMENT_COLOR = 'rgba(107, 114, 128, 0.42)';
 const UPDATE_INTERVAL_MS = 30 * 1000;
-const WINDOW_FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const WINDOW_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WEEK_DAYS = 7;
 let updateScheduled = false;
 
 function normalizeText(text) {
@@ -74,9 +77,6 @@ function clampPercent(value) {
 }
 
 function getWindowMs(title) {
-    if (title.includes('5') && title.includes('小时')) {
-        return WINDOW_FIVE_HOURS_MS;
-    }
     if (title.includes('每周')) {
         return WINDOW_WEEK_MS;
     }
@@ -139,30 +139,82 @@ function findProgressHost(article) {
     );
 }
 
-function updateTimeMarker(progressHost, timeRemainingPercent) {
+function setStyleValue(element, property, value) {
+    if (element.style[property] !== value) {
+        element.style[property] = value;
+    }
+}
+
+function updateWeeklySegments(progressHost) {
+    let segments = progressHost.querySelector(
+        `span[${WEEK_SEGMENTS_ATTR}="true"]`,
+    );
+    if (!segments) {
+        segments = document.createElement('span');
+        segments.setAttribute(WEEK_SEGMENTS_ATTR, 'true');
+        for (let day = 1; day < WEEK_DAYS; day += 1) {
+            const divider = document.createElement('span');
+            divider.style.position = 'absolute';
+            divider.style.top = '-3px';
+            divider.style.bottom = '-3px';
+            divider.style.left = `${(day / WEEK_DAYS) * 100}%`;
+            divider.style.width = '1px';
+            divider.style.transform = 'translateX(-1px)';
+            divider.style.backgroundColor = SEGMENT_COLOR;
+            divider.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.5)';
+            segments.appendChild(divider);
+        }
+        progressHost.appendChild(segments);
+    }
+
+    setStyleValue(segments, 'position', 'absolute');
+    setStyleValue(segments, 'inset', '0');
+    setStyleValue(segments, 'pointerEvents', 'none');
+}
+
+function getWeekDayIndex(resetDate, now) {
+    const windowStartMs = resetDate.getTime() - WINDOW_WEEK_MS;
+    const elapsedMs = now.getTime() - windowStartMs;
+    const rawIndex = Math.floor((elapsedMs / WINDOW_WEEK_MS) * WEEK_DAYS);
+    return Math.max(0, Math.min(WEEK_DAYS - 1, rawIndex));
+}
+
+function updateWeeklyDayMarker(
+    progressHost,
+    resetDate,
+    now,
+    timeRemainingPercent,
+) {
+    updateWeeklySegments(progressHost);
+
     let marker = progressHost.querySelector(`span[${TIME_MARKER_ATTR}="true"]`);
     if (!marker) {
         marker = document.createElement('span');
         marker.setAttribute(TIME_MARKER_ATTR, 'true');
-        marker.style.position = 'absolute';
-        marker.style.top = '-3px';
-        marker.style.bottom = '-3px';
-        marker.style.width = '2px';
-        marker.style.borderRadius = '999px';
-        marker.style.pointerEvents = 'none';
-        marker.style.transform = 'translateX(-1px)';
-        marker.style.boxShadow = '0 0 0 1px rgba(255, 255, 255, 0.75)';
         progressHost.appendChild(marker);
     }
 
+    const dayIndex = getWeekDayIndex(resetDate, now);
     const left = `${clampPercent(timeRemainingPercent)}%`;
-    const title = `时间窗口剩余 ${Math.round(timeRemainingPercent)}%`;
-    if (marker.style.left !== left) {
-        marker.style.left = left;
-    }
-    if (marker.style.backgroundColor !== 'rgb(202, 138, 4)') {
-        marker.style.backgroundColor = '#ca8a04';
-    }
+    const title = `每周窗口：当前第 ${dayIndex + 1} 天 / 共 ${WEEK_DAYS} 天`;
+    setStyleValue(marker, 'position', 'absolute');
+    setStyleValue(marker, 'top', 'calc(100% + 3px)');
+    setStyleValue(marker, 'bottom', '');
+    setStyleValue(marker, 'left', left);
+    setStyleValue(marker, 'width', '8px');
+    setStyleValue(marker, 'height', '8px');
+    setStyleValue(marker, 'borderLeft', '');
+    setStyleValue(marker, 'borderRight', '');
+    setStyleValue(marker, 'borderBottom', '');
+    setStyleValue(marker, 'borderRadius', '999px');
+    setStyleValue(marker, 'pointerEvents', 'none');
+    setStyleValue(marker, 'transform', 'translateX(-4px)');
+    setStyleValue(marker, 'backgroundColor', MARKER_COLOR);
+    setStyleValue(
+        marker,
+        'boxShadow',
+        '0 0 0 2px rgba(255, 255, 255, 0.95), 0 1px 3px rgba(0, 0, 0, 0.18)',
+    );
     if (marker.title !== title) {
         marker.title = title;
     }
@@ -189,9 +241,11 @@ function updateArticle(article, now) {
     const timeRemainingPercent = clampPercent((remainingMs / windowMs) * 100);
 
     const progressHost = findProgressHost(article);
-    if (progressHost) {
-        updateTimeMarker(progressHost, timeRemainingPercent);
+    if (!progressHost) {
+        return;
     }
+
+    updateWeeklyDayMarker(progressHost, resetDate, now, timeRemainingPercent);
 }
 
 function updateAllCards() {
