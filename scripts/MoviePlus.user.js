@@ -8,14 +8,14 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/douban.svg
-// @version        20260226
+// @version        20260504
 // @license        MIT
 // ==/UserScript==
 'use strict';
 
 const myScriptStyle = document.createElement('style');
 myScriptStyle.innerHTML =
-    '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;padding: 0 8px;text-align: center;width: 65px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
+    '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;box-sizing: border-box;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;overflow: hidden;padding: 0 8px;text-align: center;text-overflow: ellipsis;white-space: nowrap;width: 82px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
 myScriptStyle.innerHTML +=
     ' .db-series-link, .db-series-link:link, .db-series-link:visited, .db-series-link:hover, .db-series-link:active { color: inherit !important; text-decoration: none !important; }';
 document.getElementsByTagName('head')[0].appendChild(myScriptStyle);
@@ -69,17 +69,22 @@ function parseURL(url) {
 
 function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
     let name, sites;
+    const siteList = document.querySelector('#content div.site-bt-body ul');
+    if (!siteList) return;
+
     title = title.trim();
+    const cnSearchKeyword = encodeURIComponent(
+        get_cn_site_search_keyword(title_cn, title),
+    );
     sites = {
-        YIFY: 'https://yts.mx/browse-movies/' + title,
+        爱壹帆: 'https://www.yfsp.tv/search/' + cnSearchKeyword,
         'BTDigg EN':
             'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
         'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
         'EXT.TO': 'https://ext.to/browse/?q=' + title,
         独播库:
-            'https://www.duboku.tv/vodsearch/-------------.html?wd=' +
-            title_cn +
-            '&submit=',
+            'https://www.dbku.tv/vodsearch/-------------.html?wd=' +
+            cnSearchKeyword,
         动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
     };
 
@@ -90,12 +95,23 @@ function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
 
     for (name in sites) {
         let link = parse_sites(name, sites);
-        $('#content div.site-bt-body ul').append(link);
+        siteList.append(link);
     }
+}
+
+function get_cn_site_search_keyword(title_cn, title) {
+    const keyword = title_cn.trim();
+    if (!keyword) return title;
+    if (!/[\u4e00-\u9fa5]/.test(keyword)) return keyword;
+
+    return keyword.replace(/\s+[a-zA-Z][\s\S]*$/, '').trim() || keyword;
 }
 
 function update_sub_site(title, douban_ID, IMDb_ID) {
     let name, sites;
+    const siteList = document.querySelector('#content div.site-sub-body ul');
+    if (!siteList) return;
+
     title = encodeURI(title);
 
     sites = {
@@ -106,20 +122,21 @@ function update_sub_site(title, douban_ID, IMDb_ID) {
 
     for (name in sites) {
         let link = parse_sites(name, sites);
-        $('#content div.site-sub-body ul').append(link);
+        siteList.append(link);
     }
 }
 
 function parse_sites(name, sites) {
     let link = sites[name],
         link_parsed = parseURL(link);
-    let aTag = $('<a></a>');
-    link = aTag.attr('href', link);
-    link.attr('data-host', link_parsed.host);
-    link.attr('target', '_blank').attr('rel', 'nofollow');
-    link.html(name);
+    const aTag = document.createElement('a');
+    aTag.href = link;
+    aTag.dataset.host = link_parsed.host;
+    aTag.target = '_blank';
+    aTag.rel = 'noopener noreferrer nofollow';
+    aTag.textContent = name;
 
-    return link;
+    return aTag;
 }
 
 function get_other_title_en(other_title) {
@@ -149,27 +166,49 @@ function format_series_name(name) {
     return name_arr[0] + 'S' + series_id;
 }
 
+function create_aside_section(title, sectionClass) {
+    const template = document.createElement('template');
+    template.innerHTML = aside_html.trim();
+
+    const section = template.content.firstElementChild;
+    section.classList.add(sectionClass);
+    section
+        .querySelector('div.c-aside-body')
+        .classList.add(sectionClass + '-body');
+    section.querySelector('h2 i').textContent = title;
+
+    return section;
+}
+
+function on_ready(callback) {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', callback, { once: true });
+        return;
+    }
+
+    callback();
+}
+
 function main() {
     const seBwhA = document.createElement('a');
     seBwhA.id = 'seBwhA';
     document.getElementsByTagName('html')[0].appendChild(seBwhA);
 
-    $(document).ready(() => {
-        let site_sub = $(aside_html),
-            selector = $('#content div.aside');
-        site_sub.addClass('name-offline');
-        site_sub.find('div.c-aside-body').addClass('site-sub-body');
-        site_sub.find('h2 i').text('字幕直达');
+    on_ready(() => {
+        const selector = document.querySelector('#content div.aside');
+        const h1_span = document.querySelectorAll('#content > h1 > span');
+        const info = document.querySelector('#info');
+        if (!selector || h1_span.length < 2 || !info) return;
+
+        let site_sub = create_aside_section('字幕直达', 'site-sub');
+        site_sub.classList.add('name-offline');
         selector.prepend(site_sub);
 
-        let site_bt = $(aside_html);
-        site_bt.addClass('site_bt');
-        site_bt.find('div.c-aside-body').addClass('site-bt-body');
-        site_bt.find('h2 i').text('BT 搜索');
+        let site_bt = create_aside_section('BT 搜索', 'site-bt');
+        site_bt.classList.add('site_bt');
         selector.prepend(site_bt);
 
-        let h1_span,
-            title_cn,
+        let title_cn,
             title_en,
             title_en_sub,
             bt_title,
@@ -177,7 +216,6 @@ function main() {
             douban_ID,
             IMDb_ID;
 
-        h1_span = $('#content > h1 > span');
         let title_all = h1_span[0].textContent;
 
         if (cn_total_reg.test(title_all)) {
@@ -231,7 +269,7 @@ function main() {
         }
 
         //解析info内容
-        let info_text = $('#info')[0].innerText,
+        let info_text = info.innerText,
             info_map = {};
         info_text.split('\n').forEach((line) => {
             let index = line.indexOf(':');

@@ -8,20 +8,19 @@
 
 # 脚本列表
 
-| 脚本 | 简介 | 状态/链接 |
-| --- | --- | --- |
-| [MoviePlus.user.js](scripts/MoviePlus.user.js) | 豆瓣电影页面右侧添加资源搜索入口 | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
-| [BiliTab.user.js](scripts/BiliTab.user.js) | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
-| [CodexUsageRemainingTime.user.js](scripts/CodexUsageRemainingTime.user.js) | Codex 分析页标出用量窗口时间刻度 | 不发布到 GreasyFork |
-| [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js) | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
-| [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js) | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
-| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页滚轮翻页 | 不发布到 GreasyFork |
-| [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js) | 全站视频 1x/3x 快捷切换，直播页自动锁 1x | 不发布到 GreasyFork |
+| 脚本                                                                       | 简介                                            | 状态/链接                                                 |
+| -------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| [MoviePlus.user.js](scripts/MoviePlus.user.js)                             | 豆瓣电影页面右侧添加资源搜索入口                | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
+| [BiliTab.user.js](scripts/BiliTab.user.js)                                 | 劫持点击改为可后台新标签打开（支持开关/按键）   | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
+| [CodexUsageRemainingTime.user.js](scripts/CodexUsageRemainingTime.user.js) | Codex 分析页标出用量窗口时间刻度                | 不发布到 GreasyFork                                       |
+| [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js)                   | 仓库标题旁添加 DeepWiki 按钮                    | 不发布到 GreasyFork                                       |
+| [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js)             | GitHub 日期改为自定义数字/相对时间格式          | 不发布到 GreasyFork                                       |
+| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js)           | X/Twitter 图片详情页滚轮翻页                    | 不发布到 GreasyFork                                       |
+| [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js)               | 全站视频 1x/3x 快捷切换，支持全局/站点/页面规则 | 不发布到 GreasyFork                                       |
+| [BiliBiliTweaks.user.js](scripts/BiliBiliTweaks.user.js)                   | B 站辅助脚本，自维护 fork                       | 不发布到 GreasyFork                                       |
 
 > `MediaSpeedToggle.user.js` 为 DCjanus 个人使用场景定制脚本，不追求通用性与可配置性。
 
 MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
-# 其他我正在使用的脚本
-
--   [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714) B 站辅助脚本，有关闭 P2P CDN 等功能
+BiliBiliTweaks Fork 自 [Make BiliBili Great Again](https://greasyfork.org/zh-CN/scripts/415714)，原作者 [kookxiang](https://greasyfork.org/zh-CN/users/188561-kookxiang)。导入基线为上游 `1.5.12`；上游未声明许可证，因此本仓库只保留自用维护副本与来源说明。
