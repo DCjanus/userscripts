@@ -19,6 +19,7 @@ const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
 const UPDATE_INTERVAL_MS = 30 * 1000;
 const WINDOW_FIVE_HOURS_MS = 5 * 60 * 60 * 1000;
 const WINDOW_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+let updateScheduled = false;
 
 function normalizeText(text) {
     return (text || '').replace(/\s+/g, ' ').trim();
@@ -228,9 +229,17 @@ function updateTimeMarker(progressHost, timeRemainingPercent, paceInfo) {
         progressHost.appendChild(marker);
     }
 
-    marker.style.left = `${clampPercent(timeRemainingPercent)}%`;
-    marker.style.backgroundColor = paceInfo.markerColor;
-    marker.title = `时间窗口剩余 ${Math.round(timeRemainingPercent)}%`;
+    const left = `${clampPercent(timeRemainingPercent)}%`;
+    const title = `时间窗口剩余 ${Math.round(timeRemainingPercent)}%`;
+    if (marker.style.left !== left) {
+        marker.style.left = left;
+    }
+    if (marker.style.backgroundColor !== paceInfo.markerColor) {
+        marker.style.backgroundColor = paceInfo.markerColor;
+    }
+    if (marker.title !== title) {
+        marker.title = title;
+    }
 }
 
 function updatePaceLine(
@@ -239,7 +248,9 @@ function updatePaceLine(
     remainingMs,
     paceInfo,
 ) {
-    resetLine.style.flexWrap = 'wrap';
+    if (resetLine.style.flexWrap !== 'wrap') {
+        resetLine.style.flexWrap = 'wrap';
+    }
 
     let line = resetLine.querySelector(`span[${PACE_LINE_ATTR}="true"]`);
     if (!line) {
@@ -253,8 +264,13 @@ function updatePaceLine(
     }
 
     const timeText = `${Math.round(timeRemainingPercent)}%（${formatDuration(remainingMs)}）`;
-    line.textContent = `时间剩余：${timeText} · ${paceInfo.text}`;
-    line.style.color = paceInfo.color;
+    const lineText = `时间剩余：${timeText} · ${paceInfo.text}`;
+    if (line.textContent !== lineText) {
+        line.textContent = lineText;
+    }
+    if (line.style.color !== paceInfo.color) {
+        line.style.color = paceInfo.color;
+    }
 }
 
 function updateArticle(article, now) {
@@ -303,11 +319,23 @@ function updateAllCards() {
     }
 }
 
+function scheduleUpdateAllCards() {
+    if (updateScheduled) {
+        return;
+    }
+
+    updateScheduled = true;
+    requestAnimationFrame(() => {
+        updateScheduled = false;
+        updateAllCards();
+    });
+}
+
 function observeAndUpdate() {
     updateAllCards();
 
     const observer = new MutationObserver(() => {
-        updateAllCards();
+        scheduleUpdateAllCards();
     });
     observer.observe(document.body, {
         childList: true,
