@@ -19,9 +19,7 @@ const STYLE_ID = 'rgh-pr-file-tree-review-stats-style';
 const STATS_CLASS = 'rgh-pr-file-tree-review-stats';
 const PATCHED_ATTR = 'data-rgh-pr-file-tree-review-stats';
 const VIEWED_ATTR = 'data-rgh-pr-file-viewed';
-const NETWORK_HOOKED = Symbol.for(
-    'GitHubPrFileTreeReviewStats.networkHooked',
-);
+const NETWORK_HOOKED = Symbol.for('GitHubPrFileTreeReviewStats.networkHooked');
 
 const FILE_SELECTOR =
     '[id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]';
@@ -373,7 +371,9 @@ function installNetworkHooks() {
     }
 
     const nativeSend = XMLHttpRequest.prototype.send;
-    XMLHttpRequest.prototype.send = function sendWithReviewStatsUpdate(...args) {
+    XMLHttpRequest.prototype.send = function sendWithReviewStatsUpdate(
+        ...args
+    ) {
         this.addEventListener('loadend', schedulePostNetworkUpdate, {
             once: true,
         });
