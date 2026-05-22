@@ -7,7 +7,7 @@
 // @include      https://github.com/*/*/pull/*/files*
 // @include      https://github.com/*/*/pull/*/changes*
 // @icon         https://github.com/favicon.ico
-// @version      20260522
+// @version      2026052201
 // @license      MIT
 // @grant        none
 // ==/UserScript==
@@ -19,6 +19,7 @@ const STATS_CLASS = 'rgh-pr-file-tree-review-stats';
 const PATCHED_ATTR = 'data-rgh-pr-file-tree-review-stats';
 const VIEWED_ATTR = 'data-rgh-pr-file-viewed';
 const UPDATE_DELAY_MS = 100;
+const UPDATE_BURST_DELAYS_MS = [100, 300, 800, 1500, 3000];
 let updateTimer = 0;
 
 function isPrFilesPage() {
@@ -35,11 +36,13 @@ function ensureStyle() {
     const style = document.createElement('style');
     style.id = STYLE_ID;
     style.textContent = `
-        li[${VIEWED_ATTR}="false"] a[href^="#diff-"] {
+        li[${VIEWED_ATTR}="false"] a[href^="#diff-"],
+        a[${VIEWED_ATTR}="false"][href^="#diff-"] {
             font-weight: 600;
         }
 
-        li[${VIEWED_ATTR}="true"] a[href^="#diff-"] {
+        li[${VIEWED_ATTR}="true"] a[href^="#diff-"],
+        a[${VIEWED_ATTR}="true"][href^="#diff-"] {
             font-weight: 400;
         }
 
@@ -171,7 +174,10 @@ function collectFileTreeRows() {
 
     for (const link of document.querySelectorAll('a[href^="#diff-"]')) {
         const href = link.getAttribute('href');
-        const row = link.closest('li[class*="file-tree-row"]');
+        const row =
+            link.closest('li[class*="file-tree-row"]') ||
+            link.closest('li.ActionListItem') ||
+            (link.matches('.ActionList-content') ? link : null);
         if (!href || !row) {
             continue;
         }
@@ -183,6 +189,10 @@ function collectFileTreeRows() {
 }
 
 function getStatsHost(row, link) {
+    if (row === link) {
+        return link;
+    }
+
     return (
         row.querySelector('[class*="TreeViewItemContent"]') ||
         link.closest('[class*="TreeViewItemContentText"]') ||
@@ -253,15 +263,29 @@ function scheduleUpdate() {
     updateTimer = window.setTimeout(updateFileTree, UPDATE_DELAY_MS);
 }
 
+function scheduleUpdateBurst() {
+    for (const delay of UPDATE_BURST_DELAYS_MS) {
+        window.setTimeout(updateFileTree, delay);
+    }
+}
+
 function start() {
     scheduleUpdate();
 
     const observer = new MutationObserver(scheduleUpdate);
     observer.observe(document.body, {
         childList: true,
+        characterData: true,
         subtree: true,
         attributes: true,
-        attributeFilter: ['aria-pressed', 'aria-label', 'checked'],
+        attributeFilter: [
+            'aria-label',
+            'aria-pressed',
+            'checked',
+            'class',
+            'data-file-user-viewed',
+            'hidden',
+        ],
     });
 
     document.addEventListener(
@@ -276,15 +300,30 @@ function start() {
                     'button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox',
                 )
             ) {
-                scheduleUpdate();
+                scheduleUpdateBurst();
             }
         },
         true,
     );
 
-    document.addEventListener('turbo:load', scheduleUpdate);
-    document.addEventListener('pjax:end', scheduleUpdate);
-    window.addEventListener('popstate', scheduleUpdate);
+    document.addEventListener(
+        'change',
+        (event) => {
+            if (
+                event.target instanceof Element &&
+                event.target.matches('input.js-reviewed-checkbox')
+            ) {
+                scheduleUpdateBurst();
+            }
+        },
+        true,
+    );
+
+    document.addEventListener('turbo:load', scheduleUpdateBurst);
+    document.addEventListener('turbo:render', scheduleUpdateBurst);
+    document.addEventListener('pjax:end', scheduleUpdateBurst);
+    window.addEventListener('focus', scheduleUpdateBurst);
+    window.addEventListener('popstate', scheduleUpdateBurst);
 }
 
 if (document.readyState === 'loading') {
