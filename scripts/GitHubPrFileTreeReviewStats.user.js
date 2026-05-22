@@ -7,7 +7,7 @@
 // @include      https://github.com/*/*/pull/*/files*
 // @include      https://github.com/*/*/pull/*/changes*
 // @icon         https://github.com/favicon.ico
-// @version      2026052201
+// @version      20260522
 // @license      MIT
 // @grant        none
 // ==/UserScript==
