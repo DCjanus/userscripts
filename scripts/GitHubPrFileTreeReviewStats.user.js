@@ -10,6 +10,7 @@
 // @version      20260522
 // @license      MIT
 // @grant        none
+// @run-at       document-start
 // ==/UserScript==
 'use strict';
 
@@ -18,9 +19,20 @@ const STYLE_ID = 'rgh-pr-file-tree-review-stats-style';
 const STATS_CLASS = 'rgh-pr-file-tree-review-stats';
 const PATCHED_ATTR = 'data-rgh-pr-file-tree-review-stats';
 const VIEWED_ATTR = 'data-rgh-pr-file-viewed';
-const UPDATE_DELAY_MS = 100;
-const UPDATE_BURST_DELAYS_MS = [100, 300, 800, 1500, 3000];
-let updateTimer = 0;
+const NETWORK_HOOKED = Symbol.for(
+    'GitHubPrFileTreeReviewStats.networkHooked',
+);
+
+const FILE_SELECTOR =
+    '[id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]';
+const FILE_HEADER_SELECTOR =
+    '.file-header, [class*="DiffHeader"], [class*="FileHeader"]';
+const VIEWED_CONTROL_SELECTOR =
+    'button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox';
+const FILE_TREE_LINK_SELECTOR = 'a[href^="#diff-"]';
+
+let updateScheduled = false;
+let observerStarted = false;
 
 function isPrFilesPage() {
     return /^\/[^/]+\/[^/]+\/pull\/\d+\/(files|changes)/.test(
@@ -98,10 +110,7 @@ function parseLineStats(text) {
 }
 
 function getFileStats(file) {
-    const header =
-        file.querySelector('.file-header') ||
-        file.querySelector('[class*="DiffHeader"]') ||
-        file.querySelector('[class*="FileHeader"]');
+    const header = file.querySelector(FILE_HEADER_SELECTOR);
     if (!header) {
         return null;
     }
@@ -148,41 +157,28 @@ function getViewedState(file) {
     return null;
 }
 
-function collectDiffInfo() {
-    const infoByHash = new Map();
-    const files = document.querySelectorAll(
-        '[id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]',
+function getHashFromLink(link) {
+    const href = link.getAttribute('href');
+    return href?.startsWith('#diff-') ? href.slice(1) : null;
+}
+
+function getFileTreeRow(link) {
+    return (
+        link.closest('li[class*="file-tree-row"]') ||
+        link.closest('li.ActionListItem') ||
+        (link.matches('.ActionList-content') ? link : null)
     );
-
-    for (const file of files) {
-        const stats = getFileStats(file);
-        if (!stats) {
-            continue;
-        }
-
-        infoByHash.set(file.id, {
-            ...stats,
-            viewed: getViewedState(file),
-        });
-    }
-
-    return infoByHash;
 }
 
 function collectFileTreeRows() {
     const rowsByHash = new Map();
 
-    for (const link of document.querySelectorAll('a[href^="#diff-"]')) {
-        const href = link.getAttribute('href');
-        const row =
-            link.closest('li[class*="file-tree-row"]') ||
-            link.closest('li.ActionListItem') ||
-            (link.matches('.ActionList-content') ? link : null);
-        if (!href || !row) {
-            continue;
+    for (const link of document.querySelectorAll(FILE_TREE_LINK_SELECTOR)) {
+        const hash = getHashFromLink(link);
+        const row = getFileTreeRow(link);
+        if (hash && row) {
+            rowsByHash.set(hash, { row, link });
         }
-
-        rowsByHash.set(href.slice(1), { row, link });
     }
 
     return rowsByHash;
@@ -195,23 +191,45 @@ function getStatsHost(row, link) {
 
     return (
         row.querySelector('[class*="TreeViewItemContent"]') ||
+        row.querySelector('.ActionList-content') ||
         link.closest('[class*="TreeViewItemContentText"]') ||
         link.parentElement
     );
 }
 
+function setAttributeValue(element, name, value) {
+    if (value === null) {
+        if (element.hasAttribute(name)) {
+            element.removeAttribute(name);
+        }
+        return;
+    }
+
+    const stringValue = String(value);
+    if (element.getAttribute(name) !== stringValue) {
+        element.setAttribute(name, stringValue);
+    }
+}
+
 function renderStatsElement(stats) {
     const element = document.createElement('span');
+    const added = document.createElement('span');
+    const deleted = document.createElement('span');
+
     element.className = STATS_CLASS;
     element.setAttribute(
         'aria-label',
         `${stats.additions} additions, ${stats.deletions} deletions`,
     );
     element.title = `${stats.additions} additions, ${stats.deletions} deletions`;
-    element.innerHTML = `
-        <span class="${STATS_CLASS}__added">+${stats.additions}</span>
-        <span class="${STATS_CLASS}__deleted">-${stats.deletions}</span>
-    `;
+
+    added.className = `${STATS_CLASS}__added`;
+    added.textContent = `+${stats.additions}`;
+
+    deleted.className = `${STATS_CLASS}__deleted`;
+    deleted.textContent = `-${stats.deletions}`;
+
+    element.append(added, deleted);
     return element;
 }
 
@@ -222,16 +240,24 @@ function updateRow(rowInfo, stats) {
         return;
     }
 
-    row.setAttribute(PATCHED_ATTR, 'true');
-    if (stats.viewed === null) {
-        row.removeAttribute(VIEWED_ATTR);
-    } else {
-        row.setAttribute(VIEWED_ATTR, String(stats.viewed));
+    setAttributeValue(row, PATCHED_ATTR, true);
+    setAttributeValue(
+        row,
+        VIEWED_ATTR,
+        typeof stats.viewed === 'boolean' ? stats.viewed : null,
+    );
+
+    if (row === link) {
+        setAttributeValue(
+            link,
+            VIEWED_ATTR,
+            typeof stats.viewed === 'boolean' ? stats.viewed : null,
+        );
     }
 
     const existing = host.querySelector(`.${STATS_CLASS}`);
+    const expected = `+${stats.additions}-${stats.deletions}`;
     if (existing) {
-        const expected = `+${stats.additions}-${stats.deletions}`;
         if (existing.textContent.replace(/\s+/g, '') !== expected) {
             existing.replaceWith(renderStatsElement(stats));
         }
@@ -241,39 +267,131 @@ function updateRow(rowInfo, stats) {
     host.appendChild(renderStatsElement(stats));
 }
 
+function updateFile(file, rowsByHash = collectFileTreeRows(), viewedOverride) {
+    const stats = getFileStats(file);
+    if (!stats) {
+        return;
+    }
+
+    const rowInfo = rowsByHash.get(file.id);
+    if (!rowInfo) {
+        return;
+    }
+
+    updateRow(rowInfo, {
+        ...stats,
+        viewed:
+            typeof viewedOverride === 'boolean'
+                ? viewedOverride
+                : getViewedState(file),
+    });
+}
+
 function updateFileTree() {
-    if (!isPrFilesPage()) {
+    updateScheduled = false;
+    if (!isPrFilesPage() || !document.body) {
         return;
     }
 
     ensureStyle();
-    const diffInfo = collectDiffInfo();
-    const fileTreeRows = collectFileTreeRows();
-
-    for (const [hash, rowInfo] of fileTreeRows) {
-        const stats = diffInfo.get(hash);
-        if (stats) {
-            updateRow(rowInfo, stats);
-        }
+    const rowsByHash = collectFileTreeRows();
+    for (const file of document.querySelectorAll(FILE_SELECTOR)) {
+        updateFile(file, rowsByHash);
     }
 }
 
 function scheduleUpdate() {
-    window.clearTimeout(updateTimer);
-    updateTimer = window.setTimeout(updateFileTree, UPDATE_DELAY_MS);
+    if (updateScheduled) {
+        return;
+    }
+
+    updateScheduled = true;
+    requestAnimationFrame(updateFileTree);
 }
 
-function scheduleUpdateBurst() {
-    for (const delay of UPDATE_BURST_DELAYS_MS) {
-        window.setTimeout(updateFileTree, delay);
+function schedulePostNetworkUpdate() {
+    requestAnimationFrame(() => {
+        requestAnimationFrame(scheduleUpdate);
+    });
+}
+
+function getFileFromControl(control) {
+    return control.closest(FILE_SELECTOR);
+}
+
+function handleViewedClick(event) {
+    if (!(event.target instanceof Element)) {
+        return;
+    }
+
+    const control = event.target.closest(VIEWED_CONTROL_SELECTOR);
+    if (!control || control instanceof HTMLInputElement) {
+        return;
+    }
+
+    const file = getFileFromControl(control);
+    if (!file) {
+        return;
+    }
+
+    const currentViewed = getViewedState(file);
+    if (typeof currentViewed === 'boolean') {
+        updateFile(file, collectFileTreeRows(), !currentViewed);
     }
 }
 
+function handleViewedChange(event) {
+    if (
+        event.target instanceof HTMLInputElement &&
+        event.target.matches('input.js-reviewed-checkbox')
+    ) {
+        const file = getFileFromControl(event.target);
+        if (file) {
+            updateFile(file);
+        }
+    }
+}
+
+function installNetworkHooks() {
+    if (window[NETWORK_HOOKED]) {
+        return;
+    }
+
+    Object.defineProperty(window, NETWORK_HOOKED, {
+        value: true,
+    });
+
+    const nativeFetch = window.fetch;
+    if (typeof nativeFetch === 'function') {
+        window.fetch = async function fetchWithReviewStatsUpdate(...args) {
+            try {
+                return await nativeFetch.apply(this, args);
+            } finally {
+                schedulePostNetworkUpdate();
+            }
+        };
+    }
+
+    const nativeSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.send = function sendWithReviewStatsUpdate(...args) {
+        this.addEventListener('loadend', schedulePostNetworkUpdate, {
+            once: true,
+        });
+        return nativeSend.apply(this, args);
+    };
+}
+
 function start() {
+    if (observerStarted) {
+        return;
+    }
+    observerStarted = true;
+
+    installNetworkHooks();
     scheduleUpdate();
 
     const observer = new MutationObserver(scheduleUpdate);
-    observer.observe(document.body, {
+    observer.observe(document.documentElement, {
         childList: true,
         characterData: true,
         subtree: true,
@@ -288,48 +406,15 @@ function start() {
         ],
     });
 
-    document.addEventListener(
-        'click',
-        (event) => {
-            if (!(event.target instanceof Element)) {
-                return;
-            }
+    document.addEventListener('click', handleViewedClick, true);
+    document.addEventListener('change', handleViewedChange, true);
 
-            if (
-                event.target.closest(
-                    'button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox',
-                )
-            ) {
-                scheduleUpdateBurst();
-            }
-        },
-        true,
-    );
-
-    document.addEventListener(
-        'change',
-        (event) => {
-            if (
-                event.target instanceof Element &&
-                event.target.matches('input.js-reviewed-checkbox')
-            ) {
-                scheduleUpdateBurst();
-            }
-        },
-        true,
-    );
-
-    document.addEventListener('turbo:load', scheduleUpdateBurst);
-    document.addEventListener('turbo:render', scheduleUpdateBurst);
-    document.addEventListener('pjax:end', scheduleUpdateBurst);
-    window.addEventListener('focus', scheduleUpdateBurst);
-    window.addEventListener('popstate', scheduleUpdateBurst);
+    document.addEventListener('turbo:load', scheduleUpdate);
+    document.addEventListener('turbo:render', scheduleUpdate);
+    document.addEventListener('pjax:end', scheduleUpdate);
+    window.addEventListener('popstate', scheduleUpdate);
 }
 
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', start, { once: true });
-} else {
-    start();
-}
+start();
 
 console.debug(`[${SCRIPT_NAME}] loaded`);
