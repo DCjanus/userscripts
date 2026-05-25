@@ -6,21 +6,27 @@
 // @author       DCjanus
 // @match        https://chatgpt.com/codex/cloud/settings/analytics
 // @icon         https://chatgpt.com/cdn/assets/favicon-l4nq08hd.svg
-// @version      20260521
+// @version      20260525
 // @license      MIT
 // ==/UserScript==
 'use strict';
 
 const SCRIPT_NAME = 'CodexUsageRemainingTime';
 const RESET_PREFIX = '重置时间：';
+const RATE_LIMIT_API_URL = '/backend-api/wham/usage';
 const TIME_MARKER_ATTR = 'data-codex-usage-time-marker';
 const WEEK_SEGMENTS_ATTR = 'data-codex-usage-week-segments';
 const MARKER_COLOR = 'rgb(217, 119, 6)';
 const SEGMENT_COLOR = 'rgba(107, 114, 128, 0.42)';
 const UPDATE_INTERVAL_MS = 30 * 1000;
+const USAGE_CACHE_MS = 5 * 60 * 1000;
 const WINDOW_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+const WINDOW_WEEK_SECONDS = WINDOW_WEEK_MS / 1000;
 const WEEK_DAYS = 7;
 let updateScheduled = false;
+let usageSnapshot = null;
+let usageFetchPromise = null;
+let usageFetchFailed = false;
 
 function normalizeText(text) {
     return (text || '').replace(/\s+/g, ' ').trim();
@@ -83,6 +89,34 @@ function getWindowMs(title) {
     return null;
 }
 
+function isApproximately(value, target) {
+    return (
+        typeof value === 'number' &&
+        Number.isFinite(value) &&
+        value > 0 &&
+        Math.abs(value - target) <= target * 0.05
+    );
+}
+
+function getWeeklyLimitName(title) {
+    const normalizedTitle = normalizeText(title);
+    const zhSuffix = '每周使用限额';
+    if (normalizedTitle.endsWith(zhSuffix)) {
+        return normalizedTitle.slice(0, -zhSuffix.length).trim();
+    }
+
+    const enSuffix = 'Weekly usage limit';
+    if (normalizedTitle.endsWith(enSuffix)) {
+        return normalizedTitle.slice(0, -enSuffix.length).trim();
+    }
+
+    return null;
+}
+
+function normalizeLimitName(value) {
+    return normalizeText(value).toLowerCase();
+}
+
 function getArticleTitle(article) {
     const titleNode = article.querySelector('p');
     return normalizeText(titleNode?.textContent);
@@ -135,6 +169,119 @@ function findProgressHost(article) {
             (element) =>
                 element.classList.contains('relative') &&
                 element.classList.contains('w-full'),
+        ) || null
+    );
+}
+
+function getWindowResetAtMs(windowData, fetchedAtMs) {
+    const resetAfterSeconds = Number(windowData?.reset_after_seconds);
+    if (!Number.isFinite(resetAfterSeconds) || resetAfterSeconds < 0) {
+        return null;
+    }
+    return fetchedAtMs + resetAfterSeconds * 1000;
+}
+
+function collectWeeklyWindows(usageData, fetchedAtMs) {
+    const windows = [];
+    const addWindow = (limitName, windowData) => {
+        if (
+            !windowData ||
+            !isApproximately(
+                Number(windowData.limit_window_seconds),
+                WINDOW_WEEK_SECONDS,
+            )
+        ) {
+            return;
+        }
+
+        const resetAtMs = getWindowResetAtMs(windowData, fetchedAtMs);
+        if (resetAtMs === null) {
+            return;
+        }
+
+        windows.push({
+            limitName: normalizeLimitName(limitName),
+            resetAtMs,
+            windowMs: WINDOW_WEEK_MS,
+        });
+    };
+
+    addWindow('', usageData?.rate_limit?.primary_window);
+    addWindow('', usageData?.rate_limit?.secondary_window);
+
+    for (const additionalLimit of usageData?.additional_rate_limits || []) {
+        addWindow(
+            additionalLimit?.limit_name || '',
+            additionalLimit?.rate_limit?.primary_window,
+        );
+        addWindow(
+            additionalLimit?.limit_name || '',
+            additionalLimit?.rate_limit?.secondary_window,
+        );
+    }
+
+    return windows;
+}
+
+async function fetchUsageSnapshot() {
+    const nowMs = Date.now();
+    if (usageSnapshot && nowMs - usageSnapshot.fetchedAtMs < USAGE_CACHE_MS) {
+        return usageSnapshot;
+    }
+
+    if (usageFetchPromise) {
+        return usageFetchPromise;
+    }
+
+    usageFetchPromise = fetch(RATE_LIMIT_API_URL, {
+        credentials: 'include',
+        headers: {
+            accept: 'application/json',
+        },
+    })
+        .then((response) => {
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            return response.json();
+        })
+        .then((usageData) => {
+            const fetchedAtMs = Date.now();
+            usageSnapshot = {
+                fetchedAtMs,
+                weeklyWindows: collectWeeklyWindows(usageData, fetchedAtMs),
+            };
+            usageFetchFailed = false;
+            return usageSnapshot;
+        })
+        .catch((error) => {
+            usageSnapshot = null;
+            if (!usageFetchFailed) {
+                usageFetchFailed = true;
+                console.warn(
+                    `[${SCRIPT_NAME}] Failed to fetch usage data`,
+                    error,
+                );
+            }
+            return null;
+        })
+        .finally(() => {
+            usageFetchPromise = null;
+        });
+
+    return usageFetchPromise;
+}
+
+function findWeeklyWindow(limitWindows, title) {
+    const limitName = getWeeklyLimitName(title);
+    if (limitName === null) {
+        return null;
+    }
+
+    const normalizedLimitName = normalizeLimitName(limitName);
+    return (
+        limitWindows.find(
+            (windowData) => windowData.limitName === normalizedLimitName,
         ) || null
     );
 }
@@ -220,7 +367,33 @@ function updateWeeklyDayMarker(
     }
 }
 
-function updateArticle(article, now) {
+function updateArticleFromApi(article, now, limitWindows) {
+    const title = getArticleTitle(article);
+    const weeklyWindow = findWeeklyWindow(limitWindows, title);
+    if (!weeklyWindow) {
+        return false;
+    }
+
+    const remainingMs = weeklyWindow.resetAtMs - now.getTime();
+    const timeRemainingPercent = clampPercent(
+        (remainingMs / weeklyWindow.windowMs) * 100,
+    );
+
+    const progressHost = findProgressHost(article);
+    if (!progressHost) {
+        return false;
+    }
+
+    updateWeeklyDayMarker(
+        progressHost,
+        new Date(weeklyWindow.resetAtMs),
+        now,
+        timeRemainingPercent,
+    );
+    return true;
+}
+
+function updateArticleFromResetText(article, now) {
     const title = getArticleTitle(article);
     const windowMs = getWindowMs(title);
     if (!windowMs) {
@@ -248,11 +421,27 @@ function updateArticle(article, now) {
     updateWeeklyDayMarker(progressHost, resetDate, now, timeRemainingPercent);
 }
 
-function updateAllCards() {
+async function updateAllCardsAsync() {
     const now = new Date();
+    const snapshot = await fetchUsageSnapshot();
+    const weeklyWindows = snapshot?.weeklyWindows || [];
+
     for (const article of document.querySelectorAll('article')) {
-        updateArticle(article, now);
+        if (
+            weeklyWindows.length > 0 &&
+            updateArticleFromApi(article, now, weeklyWindows)
+        ) {
+            continue;
+        }
+
+        updateArticleFromResetText(article, now);
     }
+}
+
+function updateAllCards() {
+    updateAllCardsAsync().catch((error) => {
+        console.error(`[${SCRIPT_NAME}]`, error);
+    });
 }
 
 function scheduleUpdateAllCards() {
