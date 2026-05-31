@@ -8,15 +8,17 @@
 
 # 脚本列表
 
-| 脚本 | 简介 | 状态/链接 |
-| --- | --- | --- |
-| [MoviePlus.user.js](scripts/MoviePlus.user.js) | 豆瓣电影页面右侧添加资源搜索入口 | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
-| [BiliTab.user.js](scripts/BiliTab.user.js) | 劫持点击改为可后台新标签打开（支持开关/按键） | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
-| [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js) | 仓库标题旁添加 DeepWiki 按钮 | 不发布到 GreasyFork |
-| [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js) | GitHub 日期改为自定义数字/相对时间格式 | 不发布到 GreasyFork |
-| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js) | X/Twitter 图片详情页长图查看 | 不发布到 GreasyFork |
-| [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js) | 全站视频 1x/3x 快捷切换，支持全局/站点/页面规则 | 不发布到 GreasyFork |
-| [BiliBiliTweaks.user.js](scripts/BiliBiliTweaks.user.js) | B 站辅助脚本，自维护 fork | 不发布到 GreasyFork |
+| 脚本                                                                       | 简介                                            | 状态/链接                                                 |
+| -------------------------------------------------------------------------- | ----------------------------------------------- | --------------------------------------------------------- |
+| [MoviePlus.user.js](scripts/MoviePlus.user.js)                             | 豆瓣电影页面右侧添加资源搜索入口                | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469243) |
+| [BiliTab.user.js](scripts/BiliTab.user.js)                                 | 劫持点击改为可后台新标签打开（支持开关/按键）   | [GreasyFork](https://greasyfork.org/zh-CN/scripts/469242) |
+| [CodexUsageRemainingTime.user.js](scripts/CodexUsageRemainingTime.user.js) | Codex 分析页标出用量窗口时间刻度                | 不发布到 GreasyFork                                       |
+| [GitHubDeepWiki.user.js](scripts/GitHubDeepWiki.user.js)                   | 仓库标题旁添加 DeepWiki 按钮                    | 不发布到 GreasyFork                                       |
+| [GitHubDateNumeric.user.js](scripts/GitHubDateNumeric.user.js)             | GitHub 日期改为自定义数字/相对时间格式          | 不发布到 GreasyFork                                       |
+| [GitHubPrFileTreeReviewStats.user.js](scripts/GitHubPrFileTreeReviewStats.user.js) | GitHub PR 文件树显示增删行数与 Viewed 状态      | 不发布到 GreasyFork                                       |
+| [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js)           | X/Twitter 图片详情页长图查看                    | 不发布到 GreasyFork                                       |
+| [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js)               | 全站视频 1x/3x 快捷切换，支持全局/站点/页面规则 | 不发布到 GreasyFork                                       |
+| [BiliBiliTweaks.user.js](scripts/BiliBiliTweaks.user.js)                   | B 站辅助脚本，自维护 fork                       | 不发布到 GreasyFork                                       |
 
 > `MediaSpeedToggle.user.js` 为 DCjanus 个人使用场景定制脚本，不追求通用性与可配置性。
 
