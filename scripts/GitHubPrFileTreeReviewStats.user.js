@@ -4,7 +4,7 @@
 // @namespace    https://github.com/DCjanus/userscripts
 // @description  在 GitHub PR 文件树中显示每文件增删行数，并用字重区分 Viewed 状态
 // @author       DCjanus
-// @include      https://github.com/*
+// @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
 // @version      20260531
 // @license      MIT
