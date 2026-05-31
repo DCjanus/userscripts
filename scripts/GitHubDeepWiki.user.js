@@ -4,10 +4,10 @@
 // @namespace    https://github.com/dcjanus/userscripts
 // @description  在 GitHub 仓库标题旁增加 DeepWiki 按钮，并在 DeepWiki 页面展示上次索引时间
 // @author       DCjanus
-// @include      https://github.com/*/*
+// @include      https://github.com/*
 // @include      https://deepwiki.com/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg
-// @version      20260109
+// @version      20260531
 // @license      MIT
 // ==/UserScript==
 'use strict';
@@ -16,6 +16,31 @@ const BUTTON_ID = 'x-deepwiki-link-button';
 const BUTTON_CLASS = 'x-deepwiki-link';
 const STYLE_ID = 'x-deepwiki-link-style';
 const LOG_PREFIX = '[GitHubDeepWiki]';
+const LOCATION_CHANGE_EVENT = 'x-deepwiki-location-change';
+const GITHUB_NON_REPO_PATH_PREFIXES = new Set([
+    'account',
+    'codespaces',
+    'collections',
+    'dashboard',
+    'enterprise',
+    'explore',
+    'features',
+    'login',
+    'logout',
+    'marketplace',
+    'new',
+    'notifications',
+    'orgs',
+    'organizations',
+    'pricing',
+    'pulls',
+    'search',
+    'settings',
+    'signup',
+    'sponsors',
+    'topics',
+    'trending',
+]);
 const ICON_DATA_URL =
     'https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg';
 
@@ -51,6 +76,10 @@ function ensureStyle() {
 }
 
 function getRepoInfo() {
+    if (!isLikelyGitHubRepoPath()) {
+        return null;
+    }
+
     const container = document.querySelector('#repo-title-component');
     if (!container) {
         return null;
@@ -94,13 +123,49 @@ function getRepoInfo() {
     };
 }
 
+function isLikelyGitHubRepoPath() {
+    const pathParts = window.location.pathname.split('/').filter(Boolean);
+    if (pathParts.length < 2) {
+        return false;
+    }
+
+    return !GITHUB_NON_REPO_PATH_PREFIXES.has(pathParts[0].toLowerCase());
+}
+
+function setupLocationChangeEvent() {
+    const dispatchLocationChange = () => {
+        window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT));
+    };
+
+    for (const methodName of ['pushState', 'replaceState']) {
+        const original = history[methodName];
+        if (original.__deepWikiWrapped) {
+            continue;
+        }
+
+        const wrapped = function (...args) {
+            const result = original.apply(this, args);
+            dispatchLocationChange();
+            return result;
+        };
+        wrapped.__deepWikiWrapped = true;
+        history[methodName] = wrapped;
+    }
+
+    window.addEventListener('popstate', dispatchLocationChange);
+}
+
+function removeDeepWikiButton() {
+    const existing = document.getElementById(BUTTON_ID);
+    if (existing) {
+        existing.remove();
+    }
+}
+
 function insertDeepWikiButton() {
     const info = getRepoInfo();
     if (!info) {
-        const existing = document.getElementById(BUTTON_ID);
-        if (existing) {
-            existing.remove();
-        }
+        removeDeepWikiButton();
         return false;
     }
 
@@ -313,8 +378,9 @@ async function updateDeepWikiInfo() {
     );
 }
 
-function setupObserver() {
+function setupGitHubObserver() {
     let pending = false;
+    let observer = null;
 
     const scheduleInsert = () => {
         if (pending) {
@@ -327,19 +393,45 @@ function setupObserver() {
         });
     };
 
-    scheduleInsert();
+    const startObserver = () => {
+        if (observer) {
+            return;
+        }
 
-    const observer = new MutationObserver(() => {
+        observer = new MutationObserver(() => {
+            scheduleInsert();
+        });
+
+        observer.observe(document.body, {
+            childList: true,
+            subtree: true,
+        });
+    };
+
+    const stopObserver = () => {
+        if (!observer) {
+            return;
+        }
+
+        observer.disconnect();
+        observer = null;
+    };
+
+    const refreshObserver = () => {
+        if (!isLikelyGitHubRepoPath()) {
+            stopObserver();
+            removeDeepWikiButton();
+            return;
+        }
+
+        startObserver();
         scheduleInsert();
-    });
+    };
 
-    observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-    });
-
-    document.addEventListener('pjax:end', scheduleInsert);
-    document.addEventListener('turbo:load', scheduleInsert);
+    document.addEventListener('pjax:end', refreshObserver);
+    document.addEventListener('turbo:load', refreshObserver);
+    window.addEventListener(LOCATION_CHANGE_EVENT, refreshObserver);
+    refreshObserver();
 }
 
 function setupDeepWikiObserver() {
@@ -375,7 +467,8 @@ function setupDeepWikiObserver() {
 
 try {
     if (window.location.hostname === 'github.com') {
-        setupObserver();
+        setupLocationChangeEvent();
+        setupGitHubObserver();
     } else if (window.location.hostname === 'deepwiki.com') {
         setupDeepWikiObserver();
     }
