@@ -4,10 +4,10 @@
 // @namespace    https://github.com/dcjanus/userscripts
 // @description  在 GitHub 仓库标题旁增加 DeepWiki 按钮，并在 DeepWiki 页面展示上次索引时间
 // @author       DCjanus
-// @include      https://github.com/*/*
-// @include      https://deepwiki.com/*
+// @match        https://github.com/*/*
+// @match        https://deepwiki.com/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg
-// @version      20260109
+// @version      20260531
 // @license      MIT
 // ==/UserScript==
 'use strict';
