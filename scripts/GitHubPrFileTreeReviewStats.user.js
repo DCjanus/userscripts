@@ -4,10 +4,9 @@
 // @namespace    https://github.com/DCjanus/userscripts
 // @description  在 GitHub PR 文件树中显示每文件增删行数，并用字重区分 Viewed 状态
 // @author       DCjanus
-// @include      https://github.com/*/*/pull/*/files*
-// @include      https://github.com/*/*/pull/*/changes*
+// @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20260522
+// @version      20260531
 // @license      MIT
 // @grant        none
 // @run-at       document-start
@@ -20,6 +19,8 @@ const STATS_CLASS = 'rgh-pr-file-tree-review-stats';
 const PATCHED_ATTR = 'data-rgh-pr-file-tree-review-stats';
 const VIEWED_ATTR = 'data-rgh-pr-file-viewed';
 const NETWORK_HOOKED = Symbol.for('GitHubPrFileTreeReviewStats.networkHooked');
+const HISTORY_HOOKED = Symbol.for('GitHubPrFileTreeReviewStats.historyHooked');
+const LOCATION_CHANGE_EVENT = 'rgh-pr-file-tree-review-stats-location-change';
 
 const FILE_SELECTOR =
     '[id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]';
@@ -30,7 +31,7 @@ const VIEWED_CONTROL_SELECTOR =
 const FILE_TREE_LINK_SELECTOR = 'a[href^="#diff-"]';
 
 let updateScheduled = false;
-let observerStarted = false;
+let observer = null;
 
 function isPrFilesPage() {
     return /^\/[^/]+\/[^/]+\/pull\/\d+\/(files|changes)/.test(
@@ -308,6 +309,10 @@ function scheduleUpdate() {
 }
 
 function schedulePostNetworkUpdate() {
+    if (!isPrFilesPage()) {
+        return;
+    }
+
     requestAnimationFrame(() => {
         requestAnimationFrame(scheduleUpdate);
     });
@@ -381,16 +386,38 @@ function installNetworkHooks() {
     };
 }
 
-function start() {
-    if (observerStarted) {
+function setupLocationChangeEvent() {
+    const dispatchLocationChange = () => {
+        window.dispatchEvent(new Event(LOCATION_CHANGE_EVENT));
+    };
+
+    if (!window[HISTORY_HOOKED]) {
+        Object.defineProperty(window, HISTORY_HOOKED, {
+            value: true,
+        });
+
+        for (const methodName of ['pushState', 'replaceState']) {
+            const nativeMethod = history[methodName];
+            history[methodName] = function historyWithLocationChange(...args) {
+                const result = nativeMethod.apply(this, args);
+                dispatchLocationChange();
+                return result;
+            };
+        }
+    }
+
+    window.addEventListener('popstate', dispatchLocationChange);
+}
+
+function startPrFilesPage() {
+    if (observer) {
         return;
     }
-    observerStarted = true;
 
     installNetworkHooks();
     scheduleUpdate();
 
-    const observer = new MutationObserver(scheduleUpdate);
+    observer = new MutationObserver(scheduleUpdate);
     observer.observe(document.documentElement, {
         childList: true,
         characterData: true,
@@ -408,11 +435,40 @@ function start() {
 
     document.addEventListener('click', handleViewedClick, true);
     document.addEventListener('change', handleViewedChange, true);
+}
 
-    document.addEventListener('turbo:load', scheduleUpdate);
-    document.addEventListener('turbo:render', scheduleUpdate);
-    document.addEventListener('pjax:end', scheduleUpdate);
-    window.addEventListener('popstate', scheduleUpdate);
+function stopPrFilesPage() {
+    if (!observer) {
+        return;
+    }
+
+    observer.disconnect();
+    observer = null;
+    updateScheduled = false;
+
+    document.removeEventListener('click', handleViewedClick, true);
+    document.removeEventListener('change', handleViewedChange, true);
+}
+
+function refreshForCurrentRoute() {
+    if (!isPrFilesPage()) {
+        stopPrFilesPage();
+        return;
+    }
+
+    startPrFilesPage();
+    scheduleUpdate();
+}
+
+function start() {
+    setupLocationChangeEvent();
+
+    document.addEventListener('turbo:load', refreshForCurrentRoute);
+    document.addEventListener('turbo:render', refreshForCurrentRoute);
+    document.addEventListener('pjax:end', refreshForCurrentRoute);
+    window.addEventListener(LOCATION_CHANGE_EVENT, refreshForCurrentRoute);
+
+    refreshForCurrentRoute();
 }
 
 start();
