@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20260531
+// @version      20260601
 // @license      MIT
 // @grant        none
 // @run-at       document-start
@@ -124,7 +124,33 @@ function getFileStats(file) {
     return parseLineStats(statText);
 }
 
+function parseBooleanAttribute(value) {
+    if (value === null) {
+        return null;
+    }
+
+    if (/^(true|1)$/i.test(value)) {
+        return true;
+    }
+    if (/^(false|0)$/i.test(value)) {
+        return false;
+    }
+
+    return null;
+}
+
 function getViewedState(file) {
+    const dataViewed = parseBooleanAttribute(
+        file.getAttribute('data-file-user-viewed') ||
+            file
+                .querySelector('[data-file-user-viewed]')
+                ?.getAttribute('data-file-user-viewed') ||
+            null,
+    );
+    if (typeof dataViewed === 'boolean') {
+        return dataViewed;
+    }
+
     const input = file.querySelector('input.js-reviewed-checkbox');
     if (input) {
         return input.checked;
@@ -134,7 +160,7 @@ function getViewedState(file) {
         'button[class*="MarkAsViewedButton"], button[aria-pressed][aria-label*="Viewed"], button[aria-pressed][aria-label*="viewed"]',
     );
     if (!button) {
-        return null;
+        return false;
     }
 
     const pressed = button.getAttribute('aria-pressed');
@@ -153,7 +179,7 @@ function getViewedState(file) {
         return true;
     }
 
-    return null;
+    return false;
 }
 
 function getHashFromLink(link) {
