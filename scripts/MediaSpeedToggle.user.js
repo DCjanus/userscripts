@@ -7,7 +7,7 @@
 // @match        https://*/*
 // @match        http://*/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/media-speed-toggle.svg
-// @version      20260507
+// @version      20260607
 // @license      MIT
 // @run-at       document-start
 // @grant        GM_registerMenuCommand
@@ -67,9 +67,12 @@
     ]);
     const BILIBILI_DANCE_TAGS = new Set([
         '舞蹈',
+        '翻跳',
         '舞蹈翻跳',
+        '舞蹈随拍',
         '舞蹈挑战',
         '热舞',
+        '抖舞',
         '宅舞',
         '街舞',
         '中国舞',
