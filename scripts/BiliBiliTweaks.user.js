@@ -2,7 +2,7 @@
 // @name         DCjanus BiliBili Tweaks
 // @name:zh-CN   DCjanus B 站增强
 // @namespace    https://github.com/dcjanus/userscripts
-// @version      20260512
+// @version      20260705
 // @description  useful tweaks for bilibili.com
 // @author       kookxiang, DCjanus
 // @match        https://*.bilibili.com/*
@@ -385,6 +385,56 @@ if (
 			return open.apply(this, args);
 		};
 	})(unsafeWindow.XMLHttpRequest.prototype.open);
+}
+
+// 视频页按 G 切换网页全屏
+if (
+	location.href.startsWith("https://www.bilibili.com/video/") ||
+	location.href.startsWith("https://www.bilibili.com/bangumi/play/")
+) {
+	function isEditableTarget(target) {
+		return (
+			typeof target?.closest === "function" &&
+			!!target.closest(
+				'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]',
+			)
+		);
+	}
+
+	function findWebFullscreenButton() {
+		return Array.from(document.querySelectorAll(".bpx-player-ctrl-web")).find(
+			(button) => {
+				const rect = button.getBoundingClientRect();
+				return rect.width > 0 && rect.height > 0;
+			},
+		);
+	}
+
+	document.addEventListener(
+		"keydown",
+		(e) => {
+			if (
+				e.key.toLowerCase() !== "g" ||
+				e.altKey ||
+				e.ctrlKey ||
+				e.metaKey ||
+				e.shiftKey ||
+				e.repeat ||
+				e.isComposing ||
+				isEditableTarget(e.target)
+			) {
+				return;
+			}
+
+			const webFullscreenButton = findWebFullscreenButton();
+			if (!webFullscreenButton) return;
+
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			webFullscreenButton.click();
+		},
+		true,
+	);
 }
 
 // 真·原画直播
