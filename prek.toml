@@ -1,0 +1,22 @@
+minimum_prek_version = "0.4.8"
+
+[[repos]]
+repo = "builtin"
+hooks = [
+  { id = "check-json" },
+  { id = "check-toml" },
+  { id = "check-yaml" },
+  { id = "end-of-file-fixer" },
+  { id = "trailing-whitespace" },
+]
+
+[[repos]]
+repo = "local"
+
+[[repos.hooks]]
+id = "biome"
+name = "biome"
+language = "node"
+entry = "biome check"
+additional_dependencies = ["@biomejs/biome@latest"]
+files = "^(scripts/.*\\.user\\.js|biome\\.json)$"
