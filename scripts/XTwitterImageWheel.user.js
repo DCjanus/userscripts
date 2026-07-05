@@ -123,7 +123,7 @@ function upgradeImageUrl(src) {
 	try {
 		const url = new URL(src, location.href);
 		if (
-			url.hostname.endsWith("twimg.com") &&
+			(url.hostname === "twimg.com" || url.hostname.endsWith(".twimg.com")) &&
 			url.pathname.includes("/media/")
 		) {
 			url.searchParams.set("name", "orig");

@@ -8,7 +8,7 @@
 // @match          https://movie.douban.com/subject/*/?*
 // @exclude        https://movie.douban.com/subject/*/*/
 // @icon           https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/douban.svg
-// @version        20260504
+// @version        20260705
 // @license        MIT
 // ==/UserScript==
 
@@ -271,7 +271,7 @@ function main() {
 		//规范的命名只保留英文字母
 		bt_title = bt_title
 			.replaceAll(symbol_delete_reg, " ")
-			.replace("'", "")
+			.replaceAll("'", "")
 			.replace(/\s+/g, " ")
 			.trim();
 		bt_title = format_series_name(bt_title);
