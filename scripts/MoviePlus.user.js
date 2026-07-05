@@ -11,297 +11,281 @@
 // @version        20260504
 // @license        MIT
 // ==/UserScript==
-'use strict';
 
-const myScriptStyle = document.createElement('style');
+const myScriptStyle = document.createElement("style");
 myScriptStyle.innerHTML =
-    '@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;box-sizing: border-box;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;overflow: hidden;padding: 0 8px;text-align: center;text-overflow: ellipsis;white-space: nowrap;width: 82px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}';
+	"@charset utf-8;.c-aside {margin-bottom: 30px}  .c-aside-body {*letter-spacing: normal}  .c-aside-body a {border-radius: 6px;box-sizing: border-box;color: #37A;display: inline-block;letter-spacing: normal;margin: 0 8px 8px 0;overflow: hidden;padding: 0 8px;text-align: center;text-overflow: ellipsis;white-space: nowrap;width: 82px}  .c-aside-body a:link, .c-aside-body a:visited {background-color: #f5f5f5;color: #37A}  .c-aside-body a:hover, .c-aside-body a:active {background-color: #e8e8e8;color: #37A}  .c-aside-body a.disabled {text-decoration: line-through}  .c-aside-body a.available {background-color: #5ccccc;color: #006363}  .c-aside-body a.available:hover, .c-aside-body a.available:active {background-color: #3cc}  .c-aside-body a.honse {background-color: #fff0f5;color: #006363}  .c-aside-body a.honse:hover, .c-aside-body a.honse:active {background-color: #3cc}  .c-aside-body a.sites_r0 {text-decoration: line-through}";
 myScriptStyle.innerHTML +=
-    ' .db-series-link, .db-series-link:link, .db-series-link:visited, .db-series-link:hover, .db-series-link:active { color: inherit !important; text-decoration: none !important; }';
-document.getElementsByTagName('head')[0].appendChild(myScriptStyle);
+	" .db-series-link, .db-series-link:link, .db-series-link:visited, .db-series-link:hover, .db-series-link:active { color: inherit !important; text-decoration: none !important; }";
+document.getElementsByTagName("head")[0].appendChild(myScriptStyle);
 const aside_html =
-    '<div class=c-aside > <h2><i class="">四字标题</i>· · · · · · </h2> <div class=c-aside-body  style="padding: 0 12px;"> <ul class=bs > </ul> </div> </div>';
+	'<div class=c-aside > <h2><i class="">四字标题</i>· · · · · · </h2> <div class=c-aside-body  style="padding: 0 12px;"> <ul class=bs > </ul> </div> </div>';
 
 const en_total_reg = /^[a-zA-Z\d\s-:·,/`~!@#$%^&*()_+<>?"{}.…;'[\]]+$/;
 const en_end_reg = /\s[a-zA-Z\d\s-:·,/`~!@#$%^&*()_+<>?"{}.…;'[\]]+$/;
 const cn_start_reg =
-    /^[\u4e00-\u9fa5a-zA-Z\d\s-：:·,，/`~!@#$%^&*()_+<>?"{}.…;'[\]！￥（—）；“”‘、|《。》？【】]+/;
+	/^[\u4e00-\u9fa5a-zA-Z\d\s-：:·,，/`~!@#$%^&*()_+<>?"{}.…;'[\]！￥（—）；“”‘、|《。》？【】]+/;
 const cn_total_reg =
-    /^[\u4e00-\u9fa5a-zA-Z\d\s-：:·,，/`~!@#$%^&*()_+<>?"{}.…;'[\]！￥（—）；“”‘、|《。》？【】]+$/;
+	/^[\u4e00-\u9fa5a-zA-Z\d\s-：:·,，/`~!@#$%^&*()_+<>?"{}.…;'[\]！￥（—）；“”‘、|《。》？【】]+$/;
 const symbol_delete_reg =
-    /[-：:·,，/`~!@#$%^&*()_+<>?"{}.…;[\]！￥（—）；“”‘、|《。》？【】]/g;
+	/[-：:·,，/`~!@#$%^&*()_+<>?"{}.…;[\]！￥（—）；“”‘、|《。》？【】]/g;
 
 function parseURL(url) {
-    let a;
-    a = document.createElement('a');
-    a.href = url;
-    return {
-        source: url,
-        protocol: a.protocol.replace(':', ''),
-        host: a.hostname,
-        port: a.port,
-        query: a.search,
-        params: (function () {
-            let i, len, ret, s, seg;
-            ret = {};
-            seg = a.search.replace(/^\?/, '').split('&');
-            len = seg.length;
-            i = 0;
-            s = void 0;
-            while (i < len) {
-                if (!seg[i]) {
-                    i++;
-                    continue;
-                }
-                s = seg[i].split('=');
-                ret[s[0]] = s[1];
-                i++;
-            }
-            return ret;
-        })(),
-        file: (a.pathname.match(/\/([^\/?#]+)$/i) || [, ''])[1],
-        hash: a.hash.replace('#', ''),
-        path: a.pathname.replace(/^([^\/])/, '/$1'),
-        relative: (a.href.match(/tps?:\/\/[^\/]+(.+)/) || [, ''])[1],
-        segments: a.pathname.replace(/^\//, '').split('/'),
-    };
+	let a;
+	a = document.createElement("a");
+	a.href = url;
+	return {
+		source: url,
+		protocol: a.protocol.replace(":", ""),
+		host: a.hostname,
+		port: a.port,
+		query: a.search,
+		params: (() => {
+			let i, len, ret, s, seg;
+			ret = {};
+			seg = a.search.replace(/^\?/, "").split("&");
+			len = seg.length;
+			i = 0;
+			s = void 0;
+			while (i < len) {
+				if (!seg[i]) {
+					i++;
+					continue;
+				}
+				s = seg[i].split("=");
+				ret[s[0]] = s[1];
+				i++;
+			}
+			return ret;
+		})(),
+		file: (a.pathname.match(/\/([^/?#]+)$/i) || [undefined, ""])[1],
+		hash: a.hash.replace("#", ""),
+		path: a.pathname.replace(/^([^/])/, "/$1"),
+		relative: (a.href.match(/tps?:\/\/[^/]+(.+)/) || [undefined, ""])[1],
+		segments: a.pathname.replace(/^\//, "").split("/"),
+	};
 }
 
-function update_bt_site(title, year, douban_ID, IMDb_ID, title_cn) {
-    let name, sites;
-    const siteList = document.querySelector('#content div.site-bt-body ul');
-    if (!siteList) return;
+function update_bt_site(title, year, _douban_ID, _IMDb_ID, title_cn) {
+	let name, sites;
+	const siteList = document.querySelector("#content div.site-bt-body ul");
+	if (!siteList) return;
 
-    title = title.trim();
-    const cnSearchKeyword = encodeURIComponent(
-        get_cn_site_search_keyword(title_cn, title),
-    );
-    sites = {
-        爱壹帆: 'https://www.yfsp.tv/search/' + cnSearchKeyword,
-        'BTDigg EN':
-            'https://www.btdig.com/search?q=' + title + ' ' + year + ' 1080p',
-        'BTDigg 中': 'https://www.btdig.com/search?q=' + title_cn,
-        'EXT.TO': 'https://ext.to/browse/?q=' + title,
-        独播库:
-            'https://www.dbku.tv/vodsearch/-------------.html?wd=' +
-            cnSearchKeyword,
-        动漫花园: 'https://dmhy.org/topics/list?keyword=' + title,
-    };
+	title = title.trim();
+	const cnSearchKeyword = encodeURIComponent(
+		get_cn_site_search_keyword(title_cn, title),
+	);
+	sites = {
+		爱壹帆: `https://www.yfsp.tv/search/${cnSearchKeyword}`,
+		"BTDigg EN": `https://www.btdig.com/search?q=${title} ${year} 1080p`,
+		"BTDigg 中": `https://www.btdig.com/search?q=${title_cn}`,
+		"EXT.TO": `https://ext.to/browse/?q=${title}`,
+		独播库: `https://www.dbku.tv/vodsearch/-------------.html?wd=${cnSearchKeyword}`,
+		动漫花园: `https://dmhy.org/topics/list?keyword=${title}`,
+	};
 
-    if (is_series(title)) {
-        sites['BTDigg EN'] =
-            'https://www.btdig.com/search?q=' + title + ' 1080p';
-    }
+	if (is_series(title)) {
+		sites["BTDigg EN"] = `https://www.btdig.com/search?q=${title} 1080p`;
+	}
 
-    for (name in sites) {
-        let link = parse_sites(name, sites);
-        siteList.append(link);
-    }
+	for (name in sites) {
+		const link = parse_sites(name, sites);
+		siteList.append(link);
+	}
 }
 
 function get_cn_site_search_keyword(title_cn, title) {
-    const keyword = title_cn.trim();
-    if (!keyword) return title;
-    if (!/[\u4e00-\u9fa5]/.test(keyword)) return keyword;
+	const keyword = title_cn.trim();
+	if (!keyword) return title;
+	if (!/[\u4e00-\u9fa5]/.test(keyword)) return keyword;
 
-    return keyword.replace(/\s+[a-zA-Z][\s\S]*$/, '').trim() || keyword;
+	return keyword.replace(/\s+[a-zA-Z][\s\S]*$/, "").trim() || keyword;
 }
 
 function update_sub_site(title, douban_ID, IMDb_ID) {
-    let name, sites;
-    const siteList = document.querySelector('#content div.site-sub-body ul');
-    if (!siteList) return;
+	let name, sites;
+	const siteList = document.querySelector("#content div.site-sub-body ul");
+	if (!siteList) return;
 
-    title = encodeURI(title);
+	title = encodeURI(title);
 
-    sites = {
-        SubHD: 'https://subhd.tv/d/' + douban_ID,
-        字幕库: 'https://srtku.com/search?q=' + IMDb_ID,
-        伪射手: 'https://assrt.net/sub/?searchword=' + title,
-    };
+	sites = {
+		SubHD: `https://subhd.tv/d/${douban_ID}`,
+		字幕库: `https://srtku.com/search?q=${IMDb_ID}`,
+		伪射手: `https://assrt.net/sub/?searchword=${title}`,
+	};
 
-    for (name in sites) {
-        let link = parse_sites(name, sites);
-        siteList.append(link);
-    }
+	for (name in sites) {
+		const link = parse_sites(name, sites);
+		siteList.append(link);
+	}
 }
 
 function parse_sites(name, sites) {
-    let link = sites[name],
-        link_parsed = parseURL(link);
-    const aTag = document.createElement('a');
-    aTag.href = link;
-    aTag.dataset.host = link_parsed.host;
-    aTag.target = '_blank';
-    aTag.rel = 'noopener noreferrer nofollow';
-    aTag.textContent = name;
+	const link = sites[name],
+		link_parsed = parseURL(link);
+	const aTag = document.createElement("a");
+	aTag.href = link;
+	aTag.dataset.host = link_parsed.host;
+	aTag.target = "_blank";
+	aTag.rel = "noopener noreferrer nofollow";
+	aTag.textContent = name;
 
-    return aTag;
+	return aTag;
 }
 
 function get_other_title_en(other_title) {
-    let other_title_en = '';
-    //获取第一个英文副标题
-    other_title.split('/').some((item) => {
-        if (en_total_reg.test(item)) {
-            other_title_en = item;
-            return true;
-        }
-    });
-    return other_title_en;
+	let other_title_en = "";
+	//获取第一个英文副标题
+	other_title.split("/").some((item) => {
+		if (en_total_reg.test(item)) {
+			other_title_en = item;
+			return true;
+		}
+		return false;
+	});
+	return other_title_en;
 }
 
 function is_series(name) {
-    return /S\d+$/.test(name);
+	return /S\d+$/.test(name);
 }
 
-function not_series_01(name) {
-    return /S\d+$/.test(name) & !name.endsWith('S01');
+function _not_series_01(name) {
+	return /S\d+$/.test(name) & !name.endsWith("S01");
 }
 
 function format_series_name(name) {
-    if (!/\sSeason\s\d+$/.test(name)) return name;
-    let name_arr = name.split('Season');
-    let series_id = name_arr.slice(-1)[0].trim().padStart(2, '0');
-    return name_arr[0] + 'S' + series_id;
+	if (!/\sSeason\s\d+$/.test(name)) return name;
+	const name_arr = name.split("Season");
+	const series_id = name_arr.slice(-1)[0].trim().padStart(2, "0");
+	return `${name_arr[0]}S${series_id}`;
 }
 
 function create_aside_section(title, sectionClass) {
-    const template = document.createElement('template');
-    template.innerHTML = aside_html.trim();
+	const template = document.createElement("template");
+	template.innerHTML = aside_html.trim();
 
-    const section = template.content.firstElementChild;
-    section.classList.add(sectionClass);
-    section
-        .querySelector('div.c-aside-body')
-        .classList.add(sectionClass + '-body');
-    section.querySelector('h2 i').textContent = title;
+	const section = template.content.firstElementChild;
+	section.classList.add(sectionClass);
+	section
+		.querySelector("div.c-aside-body")
+		.classList.add(`${sectionClass}-body`);
+	section.querySelector("h2 i").textContent = title;
 
-    return section;
+	return section;
 }
 
 function on_ready(callback) {
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', callback, { once: true });
-        return;
-    }
+	if (document.readyState === "loading") {
+		document.addEventListener("DOMContentLoaded", callback, { once: true });
+		return;
+	}
 
-    callback();
+	callback();
 }
 
 function main() {
-    const seBwhA = document.createElement('a');
-    seBwhA.id = 'seBwhA';
-    document.getElementsByTagName('html')[0].appendChild(seBwhA);
+	const seBwhA = document.createElement("a");
+	seBwhA.id = "seBwhA";
+	document.getElementsByTagName("html")[0].appendChild(seBwhA);
 
-    on_ready(() => {
-        const selector = document.querySelector('#content div.aside');
-        const h1_span = document.querySelectorAll('#content > h1 > span');
-        const info = document.querySelector('#info');
-        if (!selector || h1_span.length < 2 || !info) return;
+	on_ready(() => {
+		const selector = document.querySelector("#content div.aside");
+		const h1_span = document.querySelectorAll("#content > h1 > span");
+		const info = document.querySelector("#info");
+		if (!selector || h1_span.length < 2 || !info) return;
 
-        let site_sub = create_aside_section('字幕直达', 'site-sub');
-        site_sub.classList.add('name-offline');
-        selector.prepend(site_sub);
+		const site_sub = create_aside_section("字幕直达", "site-sub");
+		site_sub.classList.add("name-offline");
+		selector.prepend(site_sub);
 
-        let site_bt = create_aside_section('BT 搜索', 'site-bt');
-        site_bt.classList.add('site_bt');
-        selector.prepend(site_bt);
+		const site_bt = create_aside_section("BT 搜索", "site-bt");
+		site_bt.classList.add("site_bt");
+		selector.prepend(site_bt);
 
-        let title_cn,
-            title_en,
-            title_en_sub,
-            bt_title,
-            year,
-            douban_ID,
-            IMDb_ID;
+		let title_cn, title_en, title_en_sub, bt_title, year, douban_ID, IMDb_ID;
 
-        let title_all = h1_span[0].textContent;
+		const title_all = h1_span[0].textContent;
 
-        if (cn_total_reg.test(title_all)) {
-            //名称只有中英文时匹配英文——————————————
-            title_en = title_all.match(en_end_reg);
-            title_en = title_en ? title_en[0] : '';
-        }
+		if (cn_total_reg.test(title_all)) {
+			//名称只有中英文时匹配英文——————————————
+			title_en = title_all.match(en_end_reg);
+			title_en = title_en ? title_en[0] : "";
+		}
 
-        if (title_en) {
-            //有英文名时匹配中文——————————————
-            title_cn = title_en ? title_all.split(title_en)[0] : '';
-        } else {
-            //直接匹配中文——————————————
-            title_cn = title_all.match(cn_start_reg);
-            title_cn = title_cn ? title_cn[0] : '';
-        }
+		if (title_en) {
+			//有英文名时匹配中文——————————————
+			title_cn = title_en ? title_all.split(title_en)[0] : "";
+		} else {
+			//直接匹配中文——————————————
+			title_cn = title_all.match(cn_start_reg);
+			title_cn = title_cn ? title_cn[0] : "";
+		}
 
-        //检查名称——————————————
-        if (title_all.length !== (title_en + title_cn).length) {
-            title_cn = '';
-            let title_array = title_all.split(' ');
-            title_array.some((item) => {
-                if (!cn_total_reg.test(item)) return true;
-                title_cn += item + ' ';
-            });
+		//检查名称——————————————
+		if (title_all.length !== (title_en + title_cn).length) {
+			title_cn = "";
+			const title_array = title_all.split(" ");
+			title_array.some((item) => {
+				if (!cn_total_reg.test(item)) return true;
+				title_cn += `${item} `;
+				return false;
+			});
 
-            title_en = '';
-        }
+			title_en = "";
+		}
 
-        // 中文标题若包含“第x季”，将序列名替换为搜索链接
-        if (title_cn) {
-            const m = title_cn.match(
-                /^(.+?)\s*第([一二三四五六七八九十百\d]+)季/,
-            );
-            if (m && m[1]) {
-                const seriesName = m[1].trim();
-                const searchUrl =
-                    'https://search.douban.com/movie/subject_search?search_text=' +
-                    encodeURIComponent(seriesName);
-                const titleSpanEl = h1_span[0];
-                const escapeForRegExp = (s) =>
-                    s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-                const leadingPattern = new RegExp(
-                    '^' + escapeForRegExp(seriesName),
-                );
-                titleSpanEl.innerHTML = titleSpanEl.innerHTML.replace(
-                    leadingPattern,
-                    `<a class="db-series-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer nofollow" title="在豆瓣搜索「${seriesName}」的其他季">${seriesName}</a>`,
-                );
-            }
-        }
+		// 中文标题若包含“第x季”，将序列名替换为搜索链接
+		if (title_cn) {
+			const m = title_cn.match(/^(.+?)\s*第([一二三四五六七八九十百\d]+)季/);
+			if (m?.[1]) {
+				const seriesName = m[1].trim();
+				const searchUrl =
+					"https://search.douban.com/movie/subject_search?search_text=" +
+					encodeURIComponent(seriesName);
+				const titleSpanEl = h1_span[0];
+				const escapeForRegExp = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+				const leadingPattern = new RegExp(`^${escapeForRegExp(seriesName)}`);
+				titleSpanEl.innerHTML = titleSpanEl.innerHTML.replace(
+					leadingPattern,
+					`<a class="db-series-link" href="${searchUrl}" target="_blank" rel="noopener noreferrer nofollow" title="在豆瓣搜索「${seriesName}」的其他季">${seriesName}</a>`,
+				);
+			}
+		}
 
-        //解析info内容
-        let info_text = info.innerText,
-            info_map = {};
-        info_text.split('\n').forEach((line) => {
-            let index = line.indexOf(':');
-            if (index > 0)
-                info_map[line.slice(0, index).trim()] = line
-                    .slice(index + 1)
-                    .trim();
-        });
+		//解析info内容
+		const info_text = info.innerText,
+			info_map = {};
+		info_text.split("\n").forEach((line) => {
+			const index = line.indexOf(":");
+			if (index > 0)
+				info_map[line.slice(0, index).trim()] = line.slice(index + 1).trim();
+		});
 
-        //匹配备用英文名——————————————
-        title_en_sub = info_map['又名'];
-        title_en_sub = title_en_sub ? get_other_title_en(title_en_sub) : '';
+		//匹配备用英文名——————————————
+		title_en_sub = info_map.又名;
+		title_en_sub = title_en_sub ? get_other_title_en(title_en_sub) : "";
 
-        bt_title = title_en || title_en_sub || title_cn;
-        //规范的命名只保留英文字母
-        bt_title = bt_title
-            .replaceAll(symbol_delete_reg, ' ')
-            .replace("'", '')
-            .replace(/\s+/g, ' ')
-            .trim();
-        bt_title = format_series_name(bt_title);
+		bt_title = title_en || title_en_sub || title_cn;
+		//规范的命名只保留英文字母
+		bt_title = bt_title
+			.replaceAll(symbol_delete_reg, " ")
+			.replace("'", "")
+			.replace(/\s+/g, " ")
+			.trim();
+		bt_title = format_series_name(bt_title);
 
-        year = h1_span[1].textContent.substr(1, 4);
+		year = h1_span[1].textContent.substr(1, 4);
 
-        douban_ID = location.href.split('/')[4] || title_cn;
+		douban_ID = location.href.split("/")[4] || title_cn;
 
-        IMDb_ID = info_map['IMDb'];
-        IMDb_ID = IMDb_ID ? IMDb_ID : title_cn;
+		IMDb_ID = info_map.IMDb;
+		IMDb_ID = IMDb_ID ? IMDb_ID : title_cn;
 
-        update_bt_site(bt_title, year, douban_ID, IMDb_ID, title_cn);
-        update_sub_site(title_cn, douban_ID, IMDb_ID);
-    });
+		update_bt_site(bt_title, year, douban_ID, IMDb_ID, title_cn);
+		update_sub_site(title_cn, douban_ID, IMDb_ID);
+	});
 }
 
 main();
