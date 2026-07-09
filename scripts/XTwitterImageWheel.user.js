@@ -7,7 +7,7 @@
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @icon         https://abs.twimg.com/favicons/twitter.2.ico
-// @version      20260705
+// @version      20260710
 // @license      MIT
 // @grant        none
 // ==/UserScript==
@@ -26,21 +26,18 @@ const ViewerMode = Object.freeze({
 	Gallery: "gallery",
 	Native: "native",
 });
-const LayerKind = Object.freeze({
-	None: "none",
-	GalleryMediaReplacement: "galleryMediaReplacement",
-	NativeModeToggle: "nativeModeToggle",
-});
 const PHOTO_PATH_RE = /^\/([^/]+)\/status\/(\d+)\/photo\/(\d+)$/;
 const PHOTO_LINK_PATH_RE = /^\/([^/]+)\/status\/(\d+)\/photo\/(\d+)$/;
 const RENDER_DEBOUNCE_MS = 80;
 const COLLECT_RETRY_MS = 250;
 const MAX_COLLECT_RETRIES = 20;
-const URL_SYNC_DEBOUNCE_MS = 120;
 const LAYOUT_DEBOUNCE_MS = 80;
 const MODE_TOGGLE_TOP_OFFSET = 88;
 const MODE_TOGGLE_RIGHT_OFFSET = 16;
 const MIN_MEDIA_SIZE = 120;
+const MIN_PANE_EXPANSION = 8;
+const VIEWER_MUTATION_SELECTOR =
+	'a[href*="/photo/"], img[src*="/media/"], [data-testid="swipe-to-dismiss"]';
 
 let renderTimer = 0;
 let retryTimer = 0;
@@ -48,9 +45,9 @@ let layoutTimer = 0;
 let retryCount = 0;
 let visibleObserver = null;
 let lastRenderKey = "";
-let lastSyncedIndex = 0;
-let dismissedGalleryRouteKey = "";
 let lastRouteKey = "";
+let activePhotoIndex = 0;
+let activePhotoPathname = "";
 
 function getViewerMode() {
 	return localStorage.getItem(MODE_KEY) === ViewerMode.Native
@@ -284,6 +281,24 @@ function mediaPaneRectFromImage(image) {
 	const imageRect = rectFromElement(image);
 	if (!imageRect) return null;
 
+	for (const selector of [
+		'[data-testid="swipe-to-dismiss"]',
+		'[role="listitem"]',
+		'[aria-roledescription="carousel"]',
+	]) {
+		const pane = image.closest(selector);
+		if (!pane) continue;
+
+		const paneRect = rectFromElement(pane);
+		if (
+			paneRect &&
+			paneRect.width >= imageRect.width &&
+			paneRect.height >= imageRect.height
+		) {
+			return paneRect;
+		}
+	}
+
 	const candidates = [];
 	for (
 		let element = image.parentElement;
@@ -295,6 +310,12 @@ function mediaPaneRectFromImage(image) {
 		if (rect.width < imageRect.width || rect.height < imageRect.height)
 			continue;
 		if (rect.height < window.innerHeight * 0.68) continue;
+		if (
+			rect.width < imageRect.width + MIN_PANE_EXPANSION &&
+			rect.height < imageRect.height + MIN_PANE_EXPANSION
+		) {
+			continue;
+		}
 
 		candidates.push(rect);
 	}
@@ -319,7 +340,8 @@ function removeGalleryMediaReplacement() {
 	}
 
 	lastRenderKey = "";
-	lastSyncedIndex = 0;
+	activePhotoIndex = 0;
+	activePhotoPathname = "";
 }
 
 function removeNativeModeToggle() {
@@ -329,31 +351,6 @@ function removeNativeModeToggle() {
 function unmountAllLayers() {
 	removeGalleryMediaReplacement();
 	removeNativeModeToggle();
-}
-
-function currentLayerKind() {
-	if (document.getElementById(REPLACEMENT_ID)) {
-		return LayerKind.GalleryMediaReplacement;
-	}
-	if (document.getElementById(NATIVE_TOGGLE_ID)) {
-		return LayerKind.NativeModeToggle;
-	}
-	return LayerKind.None;
-}
-
-function isGalleryDismissed(routeState) {
-	return dismissedGalleryRouteKey === routeState.key;
-}
-
-function dismissGalleryMediaReplacement() {
-	if (currentLayerKind() !== LayerKind.GalleryMediaReplacement) return;
-
-	const routeState = getRouteState();
-	if (routeState.kind === RouteKind.PhotoRoute) {
-		dismissedGalleryRouteKey = routeState.key;
-	}
-
-	removeGalleryMediaReplacement();
 }
 
 function positionModeToggle(button, rect) {
@@ -401,14 +398,30 @@ function scheduleLayerLayout() {
 }
 
 function switchToNativeMode() {
+	const targetPathname = activePhotoPathname;
 	setViewerMode(ViewerMode.Native);
-	dismissedGalleryRouteKey = "";
+	removeGalleryMediaReplacement();
+
+	if (targetPathname && targetPathname !== location.pathname) {
+		const nativeLink = Array.from(document.querySelectorAll("a[href]")).find(
+			(link) =>
+				!link.closest(`#${REPLACEMENT_ID}`) &&
+				linkPhotoRoute(link)?.pathname === targetPathname,
+		);
+		if (nativeLink) {
+			nativeLink.click();
+			return;
+		}
+
+		location.assign(targetPathname);
+		return;
+	}
+
 	reconcileView();
 }
 
 function switchToGalleryMode() {
 	setViewerMode(ViewerMode.Gallery);
-	dismissedGalleryRouteKey = "";
 	reconcileView();
 }
 
@@ -435,15 +448,6 @@ function mountNativeModeToggle(routeState) {
 	layoutActiveLayer();
 }
 
-function isReplacementBlankClick(event) {
-	if (!(event.target instanceof Element)) return false;
-	if (event.target.closest("button")) return false;
-	if (event.target.closest("img")) return false;
-	if (event.target.closest(".xtig-index")) return false;
-
-	return Boolean(event.target.closest(`#${REPLACEMENT_ID}`));
-}
-
 function createModeButton() {
 	const button = document.createElement("button");
 	button.type = "button";
@@ -454,14 +458,9 @@ function createModeButton() {
 	return button;
 }
 
-function createMediaReplacement(photos) {
+function createMediaReplacement(photos, initialPhotoIndex) {
 	const replacement = document.createElement("div");
 	replacement.id = REPLACEMENT_ID;
-	replacement.addEventListener("click", (event) => {
-		if (isReplacementBlankClick(event)) {
-			dismissGalleryMediaReplacement();
-		}
-	});
 
 	const scroller = document.createElement("div");
 	scroller.className = "xtig-scroller";
@@ -477,7 +476,7 @@ function createMediaReplacement(photos) {
 		const image = document.createElement("img");
 		image.src = photo.src;
 		image.alt = photo.alt;
-		image.loading = "eager";
+		image.loading = photo.index === initialPhotoIndex ? "eager" : "lazy";
 		image.decoding = "async";
 
 		const index = document.createElement("div");
@@ -508,20 +507,7 @@ function scrollToInitialPhoto(replacement, scroller, photoIndex) {
 	});
 }
 
-function syncUrl(route, photoIndex) {
-	if (photoIndex === lastSyncedIndex) return;
-
-	clearTimeout(syncUrl.timer);
-	syncUrl.timer = setTimeout(() => {
-		const nextPath = `/${route.screenName}/status/${route.statusId}/photo/${photoIndex}`;
-		if (location.pathname !== nextPath) {
-			history.replaceState(history.state, "", nextPath);
-		}
-		lastSyncedIndex = photoIndex;
-	}, URL_SYNC_DEBOUNCE_MS);
-}
-
-function observeVisiblePhoto(route, photos, scroller) {
+function observeVisiblePhoto(photos, scroller) {
 	const byIndex = new Map(photos.map((photo) => [photo.index, photo]));
 	visibleObserver?.disconnect();
 
@@ -533,9 +519,11 @@ function observeVisiblePhoto(route, photos, scroller) {
 			if (!visible) return;
 
 			const photoIndex = Number(visible.target.dataset.photoIndex);
-			if (!byIndex.has(photoIndex)) return;
+			const photo = byIndex.get(photoIndex);
+			if (!photo) return;
 
-			syncUrl(route, photoIndex);
+			activePhotoIndex = photoIndex;
+			activePhotoPathname = photo.href;
 		},
 		{
 			root: scroller,
@@ -557,21 +545,33 @@ function mountGalleryMediaReplacement(route, photos) {
 	const existing = document.getElementById(REPLACEMENT_ID);
 	if (renderKey === lastRenderKey && existing) {
 		layoutActiveLayer();
+		if (activePhotoIndex !== route.photoIndex) {
+			const scroller = existing.querySelector(".xtig-scroller");
+			if (scroller) {
+				scrollToInitialPhoto(existing, scroller, route.photoIndex);
+			}
+		}
 		return;
 	}
 
 	removeGalleryMediaReplacement();
 	ensureStyle();
 
-	const { replacement, scroller } = createMediaReplacement(photos);
+	const initialPhoto =
+		photos.find((photo) => photo.index === route.photoIndex) ?? photos[0];
+	const { replacement, scroller } = createMediaReplacement(
+		photos,
+		initialPhoto.index,
+	);
 	document.body.append(replacement);
 
 	lastRenderKey = renderKey;
-	lastSyncedIndex = route.photoIndex;
+	activePhotoIndex = initialPhoto.index;
+	activePhotoPathname = initialPhoto.href;
 
 	layoutActiveLayer();
-	scrollToInitialPhoto(replacement, scroller, route.photoIndex);
-	observeVisiblePhoto(route, photos, scroller);
+	scrollToInitialPhoto(replacement, scroller, initialPhoto.index);
+	observeVisiblePhoto(photos, scroller);
 }
 
 function reconcileView() {
@@ -579,7 +579,7 @@ function reconcileView() {
 
 	const routeState = getRouteState();
 	if (routeState.key !== lastRouteKey) {
-		dismissedGalleryRouteKey = "";
+		retryCount = 0;
 		lastRouteKey = routeState.key;
 	}
 
@@ -589,30 +589,44 @@ function reconcileView() {
 		return;
 	}
 
-	if (getViewerMode() === ViewerMode.Native) {
-		retryCount = 0;
-		mountNativeModeToggle(routeState);
-		return;
-	}
-
-	if (isGalleryDismissed(routeState)) {
-		retryCount = 0;
-		unmountAllLayers();
-		return;
-	}
-
 	const route = routeState.photo;
 	const photos = collectTweetPhotos(route);
-	if (photos.length > 0 && currentMediaPaneRect()) {
+	if (photos.length >= 2 && currentMediaPaneRect()) {
 		retryCount = 0;
-		mountGalleryMediaReplacement(route, photos);
+		if (getViewerMode() === ViewerMode.Native) {
+			mountNativeModeToggle(routeState);
+		} else {
+			mountGalleryMediaReplacement(route, photos);
+		}
 		return;
 	}
+
+	unmountAllLayers();
 
 	if (retryCount < MAX_COLLECT_RETRIES) {
 		retryCount += 1;
 		retryTimer = setTimeout(reconcileView, COLLECT_RETRY_MS);
 	}
+}
+
+function nodeMayAffectViewer(node) {
+	if (!(node instanceof Element)) return false;
+	return (
+		node.matches(VIEWER_MUTATION_SELECTOR) ||
+		Boolean(node.querySelector(VIEWER_MUTATION_SELECTOR))
+	);
+}
+
+function mutationsMayAffectViewer(records) {
+	return records.some((record) => {
+		if (record.type === "attributes") {
+			return nodeMayAffectViewer(record.target);
+		}
+
+		return [...record.addedNodes, ...record.removedNodes].some(
+			nodeMayAffectViewer,
+		);
+	});
 }
 
 function scheduleRender() {
@@ -636,11 +650,14 @@ function setup() {
 	window.addEventListener("resize", scheduleLayerLayout);
 	window.addEventListener("scroll", scheduleLayerLayout, true);
 
-	const observer = new MutationObserver(() => {
+	const observer = new MutationObserver((records) => {
+		if (!mutationsMayAffectViewer(records)) return;
 		scheduleRender();
 		scheduleLayerLayout();
 	});
 	observer.observe(document.documentElement, {
+		attributes: true,
+		attributeFilter: ["href", "src"],
 		childList: true,
 		subtree: true,
 	});
