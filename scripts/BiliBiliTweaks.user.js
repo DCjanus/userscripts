@@ -2,7 +2,7 @@
 // @name         DCjanus BiliBili Tweaks
 // @name:zh-CN   DCjanus B 站增强
 // @namespace    https://github.com/dcjanus/userscripts
-// @version      20260512
+// @version      20260707
 // @description  useful tweaks for bilibili.com
 // @author       kookxiang, DCjanus
 // @match        https://*.bilibili.com/*
@@ -385,6 +385,120 @@ if (
 			return open.apply(this, args);
 		};
 	})(unsafeWindow.XMLHttpRequest.prototype.open);
+}
+
+// 视频页按 G 切换网页全屏
+if (
+	location.href.startsWith("https://www.bilibili.com/video/") ||
+	location.href.startsWith("https://www.bilibili.com/bangumi/play/")
+) {
+	const PLAYER_HORIZONTAL_WHEEL_SEEK_COOLDOWN_MS = 250;
+	const PLAYER_HORIZONTAL_WHEEL_SEEK_SECONDS = 5;
+	let lastPlayerHorizontalWheelSeekAt = 0;
+
+	function isEditableTarget(target) {
+		return (
+			typeof target?.closest === "function" &&
+			!!target.closest(
+				'input, textarea, select, [contenteditable=""], [contenteditable="true"], [role="textbox"]',
+			)
+		);
+	}
+
+	function findWebFullscreenButton() {
+		return Array.from(document.querySelectorAll(".bpx-player-ctrl-web")).find(
+			(button) => {
+				const rect = button.getBoundingClientRect();
+				return rect.width > 0 && rect.height > 0;
+			},
+		);
+	}
+
+	function isPlayerFullscreen() {
+		if (document.fullscreenElement) return true;
+		return !!document.querySelector(
+			[
+				".bpx-player-container[data-screen='full']",
+				".bpx-player-container[data-screen='fullscreen']",
+				".bpx-player-container.bpx-state-fullscreen",
+				".bpx-player-container.bpx-player-fullscreen",
+				"#bilibili-player.mode-fullscreen",
+			].join(","),
+		);
+	}
+
+	function findPlayerVideo() {
+		return (
+			document.fullscreenElement?.querySelector?.("video") ||
+			document.querySelector("#bilibili-player video") ||
+			document.querySelector(".bpx-player-container video") ||
+			document.querySelector("video")
+		);
+	}
+
+	function seekPlayerVideo(seconds) {
+		const video = findPlayerVideo();
+		if (!video || !Number.isFinite(video.duration)) return false;
+
+		video.currentTime = Math.min(
+			Math.max(video.currentTime + seconds, 0),
+			video.duration,
+		);
+		return true;
+	}
+
+	document.addEventListener(
+		"keydown",
+		(e) => {
+			if (
+				e.key.toLowerCase() !== "g" ||
+				e.altKey ||
+				e.ctrlKey ||
+				e.metaKey ||
+				e.shiftKey ||
+				e.repeat ||
+				e.isComposing ||
+				isEditableTarget(e.target)
+			) {
+				return;
+			}
+
+			const webFullscreenButton = findWebFullscreenButton();
+			if (!webFullscreenButton) return;
+
+			e.preventDefault();
+			e.stopImmediatePropagation();
+			webFullscreenButton.click();
+		},
+		true,
+	);
+
+	document.addEventListener(
+		"wheel",
+		(e) => {
+			if (!isPlayerFullscreen()) return;
+			if (Math.abs(e.deltaX) <= Math.abs(e.deltaY)) return;
+
+			e.preventDefault();
+			e.stopImmediatePropagation();
+
+			const now = Date.now();
+			if (
+				now - lastPlayerHorizontalWheelSeekAt <
+				PLAYER_HORIZONTAL_WHEEL_SEEK_COOLDOWN_MS
+			) {
+				return;
+			}
+			lastPlayerHorizontalWheelSeekAt = now;
+
+			seekPlayerVideo(
+				e.deltaX > 0
+					? PLAYER_HORIZONTAL_WHEEL_SEEK_SECONDS
+					: -PLAYER_HORIZONTAL_WHEEL_SEEK_SECONDS,
+			);
+		},
+		{ capture: true, passive: false },
+	);
 }
 
 // 真·原画直播
