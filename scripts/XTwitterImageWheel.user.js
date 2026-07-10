@@ -7,7 +7,7 @@
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @icon         https://abs.twimg.com/favicons/twitter.2.ico
-// @version      20260126
+// @version      20260710
 // @license      MIT
 // @grant        none
 // ==/UserScript==
@@ -19,8 +19,11 @@ const CAROUSEL_SELECTOR =
 
 let lastTs = 0;
 
-function isInCarousel() {
-	return Boolean(document.querySelector(CAROUSEL_SELECTOR));
+function isWheelOverCarousel(event) {
+	return (
+		event.target instanceof Element &&
+		Boolean(event.target.closest(CAROUSEL_SELECTOR))
+	);
 }
 
 function dispatchArrow(key) {
@@ -37,11 +40,7 @@ function dispatchArrow(key) {
 }
 
 function handleWheel(event) {
-	if (!isInCarousel()) {
-		return;
-	}
-
-	if (event.deltaY === 0) {
+	if (!isWheelOverCarousel(event) || event.deltaY === 0) {
 		return;
 	}
 
@@ -51,11 +50,7 @@ function handleWheel(event) {
 	}
 	lastTs = now;
 
-	if (event.deltaY < 0) {
-		dispatchArrow("ArrowLeft");
-	} else {
-		dispatchArrow("ArrowRight");
-	}
+	dispatchArrow(event.deltaY < 0 ? "ArrowLeft" : "ArrowRight");
 }
 
 function setup() {
