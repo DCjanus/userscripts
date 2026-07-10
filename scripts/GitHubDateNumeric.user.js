@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20260426
+// @version      20260710
 // @license      MIT
 // ==/UserScript==
 
@@ -148,9 +148,10 @@ function patchRelativeTimeElement(RelativeTimeElement) {
 	Object.defineProperty(proto, RELATIVE_TIME_PATCHED, {
 		value: true,
 	});
-	proto.update = function update() {
-		originalUpdate.call(this);
+	proto.update = function update(...args) {
+		const result = originalUpdate.apply(this, args);
 		renderRelativeTime(this);
+		return result;
 	};
 }
 
