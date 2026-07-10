@@ -7,7 +7,7 @@
 // @match        https://github.com/
 // @match        https://github.com/settings/keys
 // @icon         https://github.com/favicon.ico
-// @version      20260710
+// @version      20260710.1
 // @license      MIT
 // @grant        none
 // ==/UserScript==
@@ -104,7 +104,6 @@ function collectSigningKeys(keys) {
 				keyId: key.key_id,
 				parentId: parent.id,
 				expiresAt: key.expires_at,
-				isSubkey: key.id !== parent.id,
 			});
 		}
 	}
@@ -115,8 +114,9 @@ function getExpiryState(signingKey, now = Date.now()) {
 	if (!signingKey.expiresAt) {
 		return {
 			date: null,
+			kind: "normal",
 			label: "永不过期",
-			tone: "success",
+			tone: "neutral",
 		};
 	}
 
@@ -124,6 +124,7 @@ function getExpiryState(signingKey, now = Date.now()) {
 	if (Number.isNaN(date.getTime())) {
 		return {
 			date: null,
+			kind: "unknown",
 			label: "有效期未知",
 			tone: "attention",
 		};
@@ -134,32 +135,71 @@ function getExpiryState(signingKey, now = Date.now()) {
 		const days = Math.max(1, Math.ceil(Math.abs(remainingMs) / DAY_MS));
 		return {
 			date,
+			kind: "expired",
 			label: `已过期 ${days} 天`,
-			tone: "danger",
+			tone: "neutral",
 		};
 	}
 
 	const days = Math.ceil(remainingMs / DAY_MS);
+	const kind = days <= 7 ? "danger" : days <= 30 ? "warning" : "normal";
 	return {
 		date,
+		kind,
 		label: `剩余 ${days} 天`,
-		tone: days <= 30 ? "danger" : days <= 90 ? "attention" : "success",
+		tone:
+			kind === "danger"
+				? "danger"
+				: kind === "warning"
+					? "attention"
+					: "neutral",
 	};
 }
 
-function findNearestExpiry(signingKeys) {
-	return [...signingKeys].sort((left, right) => {
-		const leftTime = left.expiresAt
-			? new Date(left.expiresAt).getTime()
-			: Number.POSITIVE_INFINITY;
-		const rightTime = right.expiresAt
-			? new Date(right.expiresAt).getTime()
-			: Number.POSITIVE_INFINITY;
+function getHomeReminder(signingKeys, now = Date.now()) {
+	const entries = signingKeys.map((signingKey) => ({
+		signingKey,
+		state: getExpiryState(signingKey, now),
+	}));
+	const usableEntries = entries.filter(
+		(entry) => entry.state.kind !== "expired",
+	);
+
+	if (usableEntries.length === 0) {
+		return {
+			kind: "unavailable",
+			signingKey: null,
+			state: {
+				date: null,
+				kind: "danger",
+				label: "没有可用的签名 key",
+				tone: "danger",
+			},
+		};
+	}
+
+	const reminders = usableEntries.filter((entry) =>
+		["danger", "warning", "unknown"].includes(entry.state.kind),
+	);
+	if (reminders.length === 0) {
+		return null;
+	}
+
+	return reminders.sort((left, right) => {
+		const leftTime = left.state.date?.getTime() ?? Number.POSITIVE_INFINITY;
+		const rightTime = right.state.date?.getTime() ?? Number.POSITIVE_INFINITY;
 		return leftTime - rightTime;
 	})[0];
 }
 
 function formatExpiryDate(date) {
+	const year = date.getFullYear();
+	const month = String(date.getMonth() + 1).padStart(2, "0");
+	const day = String(date.getDate()).padStart(2, "0");
+	return `${year}-${month}-${day}`;
+}
+
+function formatExpiryDateTime(date) {
 	return date.toLocaleString("zh-CN", {
 		year: "numeric",
 		month: "2-digit",
@@ -169,23 +209,14 @@ function formatExpiryDate(date) {
 	});
 }
 
-function getToneClasses(tone) {
+function getToneClass(tone) {
 	switch (tone) {
 		case "danger":
-			return {
-				label: "Label--danger",
-				text: "color-fg-danger",
-			};
+			return "Label--danger";
 		case "attention":
-			return {
-				label: "Label--attention",
-				text: "color-fg-attention",
-			};
+			return "Label--attention";
 		default:
-			return {
-				label: "Label--success",
-				text: "color-fg-success",
-			};
+			return "Label--secondary";
 	}
 }
 
@@ -202,7 +233,11 @@ function renderHome(signingKeys, stale) {
 		return;
 	}
 
-	const nearest = findNearestExpiry(signingKeys);
+	const reminder = getHomeReminder(signingKeys);
+	if (!reminder) {
+		return;
+	}
+
 	const card = document.createElement("a");
 	card.id = HOME_CARD_ID;
 	card.href = "/settings/keys";
@@ -217,62 +252,78 @@ function renderHome(signingKeys, stale) {
 
 	const title = document.createElement("strong");
 	title.className = "d-block";
-	title.textContent = "GPG 签名密钥";
+	title.textContent =
+		reminder.kind === "unavailable"
+			? "GPG 签名密钥不可用"
+			: "GPG 签名密钥即将到期";
 	details.appendChild(title);
 
 	const description = document.createElement("span");
 	description.className = "color-fg-muted f6 d-block text-truncate";
-	if (!nearest) {
-		description.textContent = "没有可用的签名 key";
-	} else {
-		const expiry = getExpiryState(nearest);
-		const expiryText = expiry.date
-			? ` · 到期于 ${formatExpiryDate(expiry.date)}`
-			: "";
-		description.textContent = `${nearest.keyId}${expiryText}${
+	if (!reminder.signingKey) {
+		description.textContent = `${reminder.state.label}${
 			stale ? " · 缓存数据" : ""
 		}`;
+	} else {
+		const expiryText = reminder.state.date
+			? ` · 到期 ${formatExpiryDate(reminder.state.date)}`
+			: "";
+		description.textContent = `${reminder.signingKey.keyId}${expiryText}${
+			stale ? " · 缓存数据" : ""
+		}`;
+		if (reminder.state.date) {
+			description.title = `到期于 ${formatExpiryDateTime(reminder.state.date)}`;
+		}
 	}
 	details.appendChild(description);
 	row.appendChild(details);
 
 	const badge = document.createElement("span");
 	badge.className = "Label flex-shrink-0";
-	if (!nearest) {
-		badge.classList.add("Label--danger");
-		badge.textContent = "不可用";
-	} else {
-		const expiry = getExpiryState(nearest);
-		badge.classList.add(getToneClasses(expiry.tone).label);
-		badge.textContent = expiry.label;
-	}
+	badge.classList.add(getToneClass(reminder.state.tone));
+	badge.textContent =
+		reminder.kind === "unavailable" ? "不可用" : reminder.state.label;
 	row.appendChild(badge);
 	card.appendChild(row);
 
 	dashboard.insertBefore(card, news);
 }
 
-function createSettingsSummary(signingKey, stale) {
+function createSettingsSummary(signingKey, stale, showKeyId) {
 	const expiry = getExpiryState(signingKey);
 	const summary = document.createElement("span");
-	summary.className = `${SETTINGS_SUMMARY_CLASS} color-fg-muted d-block`;
+	summary.className = `${SETTINGS_SUMMARY_CLASS} f6 d-flex flex-items-center flex-wrap gap-2 mt-1`;
 
-	const keyLabel = document.createTextNode(
-		`${signingKey.isSubkey ? "签名子 key" : "签名 key"} `,
-	);
-	const keyId = document.createElement("code");
-	keyId.textContent = signingKey.keyId;
-	const separator = document.createTextNode("：");
-	const status = document.createElement("strong");
-	status.className = getToneClasses(expiry.tone).text;
-	status.textContent = expiry.label;
+	const label = document.createElement("span");
+	label.className = "color-fg-muted";
+	label.textContent = "签名有效期";
+	summary.appendChild(label);
 
-	summary.append(keyLabel, keyId, separator, status);
-	if (expiry.date) {
-		summary.append(`，到期于 ${formatExpiryDate(expiry.date)}`);
+	if (showKeyId) {
+		const keyId = document.createElement("code");
+		keyId.textContent = signingKey.keyId;
+		summary.appendChild(keyId);
 	}
+
+	if (expiry.date) {
+		const date = document.createElement("time");
+		date.className = "color-fg-muted";
+		date.dateTime = signingKey.expiresAt;
+		date.textContent = formatExpiryDate(expiry.date);
+		date.title = formatExpiryDateTime(expiry.date);
+		summary.appendChild(date);
+	}
+
+	const status = document.createElement("span");
+	status.className = `Label ${getToneClass(expiry.tone)}`;
+	status.textContent = expiry.label;
+	summary.appendChild(status);
+
 	if (stale) {
-		summary.append("（缓存数据）");
+		const staleLabel = document.createElement("span");
+		staleLabel.className = "Label Label--secondary";
+		staleLabel.textContent = "缓存";
+		summary.appendChild(staleLabel);
 	}
 	return summary;
 }
@@ -294,7 +345,9 @@ function renderSettings(keys, stale) {
 			(key) => key.parentId === parentId,
 		);
 		for (const signingKey of rowSigningKeys) {
-			content.appendChild(createSettingsSummary(signingKey, stale));
+			content.appendChild(
+				createSettingsSummary(signingKey, stale, rowSigningKeys.length > 1),
+			);
 		}
 	}
 }
