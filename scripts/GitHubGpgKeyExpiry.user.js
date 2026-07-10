@@ -7,7 +7,7 @@
 // @match        https://github.com/
 // @match        https://github.com/settings/keys
 // @icon         https://github.com/favicon.ico
-// @version      20260710.1
+// @version      20260710
 // @license      MIT
 // @grant        none
 // ==/UserScript==
