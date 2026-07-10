@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20260601
+// @version      20260710
 // @license      MIT
 // @grant        none
 // @run-at       document-start
@@ -157,7 +157,7 @@ function getViewedState(file) {
 		'button[class*="MarkAsViewedButton"], button[aria-pressed][aria-label*="Viewed"], button[aria-pressed][aria-label*="viewed"]',
 	);
 	if (!button) {
-		return false;
+		return null;
 	}
 
 	const pressed = button.getAttribute("aria-pressed");
@@ -176,7 +176,7 @@ function getViewedState(file) {
 		return true;
 	}
 
-	return false;
+	return null;
 }
 
 function getHashFromLink(link) {
