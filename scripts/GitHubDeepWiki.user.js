@@ -7,16 +7,19 @@
 // @match        https://github.com/*/*
 // @match        https://deepwiki.com/*
 // @icon         https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg
-// @version      20260531
+// @version      20260710
 // @license      MIT
 // ==/UserScript==
 
 const BUTTON_ID = "x-deepwiki-link-button";
 const BUTTON_CLASS = "x-deepwiki-link";
 const STYLE_ID = "x-deepwiki-link-style";
-const LOG_PREFIX = "[GitHubDeepWiki]";
 const ICON_DATA_URL =
 	"https://raw.githubusercontent.com/DCjanus/userscripts/master/assets/deepwiki.svg";
+let metadataCache = {
+	url: "",
+	generatedAt: null,
+};
 
 function ensureStyle() {
 	if (document.getElementById(STYLE_ID)) {
@@ -139,38 +142,27 @@ function insertDeepWikiButton() {
 }
 
 function parseDeepWikiMetadata() {
-	const scripts = Array.from(document.scripts);
-	const generatedRegex = /"generated_at":"([^"]+)"/;
 	let generatedAt = null;
 
-	for (const script of scripts) {
-		const text = script.textContent;
-		if (!text) {
-			continue;
-		}
-
-		if (!generatedAt) {
-			const match = text.match(generatedRegex);
-			if (match) {
-				generatedAt = match[1];
+	const ldJson = document.querySelector('script[type="application/ld+json"]');
+	if (ldJson?.textContent) {
+		try {
+			const data = JSON.parse(ldJson.textContent);
+			if (data?.dateModified) {
+				generatedAt = data.dateModified;
 			}
-		}
-
-		if (generatedAt) {
-			break;
+		} catch (error) {
+			console.warn("[GitHubDeepWiki] 解析 DeepWiki 元信息失败", error);
 		}
 	}
 
 	if (!generatedAt) {
-		const ldJson = document.querySelector('script[type="application/ld+json"]');
-		if (ldJson?.textContent) {
-			try {
-				const data = JSON.parse(ldJson.textContent);
-				if (data?.dateModified) {
-					generatedAt = data.dateModified;
-				}
-			} catch (error) {
-				console.warn("[GitHubDeepWiki] 解析 DeepWiki 元信息失败", error);
+		const generatedRegex = /"generated_at":"([^"]+)"/;
+		for (const script of document.scripts) {
+			const match = script.textContent?.match(generatedRegex);
+			if (match) {
+				generatedAt = match[1];
+				break;
 			}
 		}
 	}
@@ -178,6 +170,22 @@ function parseDeepWikiMetadata() {
 	return {
 		generatedAt,
 	};
+}
+
+function getDeepWikiMetadata() {
+	const url = window.location.href;
+	if (metadataCache.url === url && metadataCache.generatedAt) {
+		return {
+			generatedAt: metadataCache.generatedAt,
+		};
+	}
+
+	const metadata = parseDeepWikiMetadata();
+	metadataCache = {
+		url,
+		generatedAt: metadata.generatedAt,
+	};
+	return metadata;
 }
 
 function formatRelativeTime(targetDate) {
@@ -227,10 +235,8 @@ function getDeepWikiRepoInfo() {
 	};
 }
 
-function findDeepWikiTitleElement(repoInfo) {
-	const link = document.querySelector('a[title="Open repository"]');
-	console.log(LOG_PREFIX, "repo link found:", Boolean(link), repoInfo);
-	return link;
+function findDeepWikiTitleElement() {
+	return document.querySelector('a[title="Open repository"]');
 }
 
 function getRepoLinkTextNode(link) {
@@ -244,24 +250,22 @@ function getRepoLinkTextNode(link) {
 
 function setRepoLinkSuffix(link, repoInfo, suffixText) {
 	const dataKey = "deepwikiBaseText";
-	let baseText = link.dataset[dataKey];
+	let baseText = repoInfo ? `${repoInfo.owner}/${repoInfo.repo}` : "";
 	let textNode = getRepoLinkTextNode(link);
 
 	if (!baseText) {
+		baseText = link.dataset[dataKey];
 		if (textNode) {
-			baseText = textNode.nodeValue.trim();
+			baseText ||= textNode.nodeValue.trim();
 		}
-		if (!baseText) {
-			baseText = repoInfo ? `${repoInfo.owner}/${repoInfo.repo}` : "";
-		}
-		link.dataset[dataKey] = baseText;
-		console.log(LOG_PREFIX, "base text set:", baseText);
 	}
+	link.dataset[dataKey] = baseText;
 
 	const fullText = suffixText ? `${baseText} ${suffixText}` : baseText;
-	console.log(LOG_PREFIX, "update title text:", fullText);
 	if (textNode) {
-		textNode.nodeValue = fullText;
+		if (textNode.nodeValue !== fullText) {
+			textNode.nodeValue = fullText;
+		}
 		return;
 	}
 
@@ -269,21 +273,18 @@ function setRepoLinkSuffix(link, repoInfo, suffixText) {
 	link.insertBefore(textNode, link.firstChild);
 }
 
-async function updateDeepWikiInfo() {
+function updateDeepWikiInfo() {
 	const repoInfo = getDeepWikiRepoInfo();
 	if (!repoInfo) {
-		console.log(LOG_PREFIX, "repo info missing");
 		return;
 	}
 
-	const title = findDeepWikiTitleElement(repoInfo);
+	const title = findDeepWikiTitleElement();
 	if (!title) {
-		console.log(LOG_PREFIX, "repo title link not found");
 		return;
 	}
 
-	const metadata = parseDeepWikiMetadata();
-	console.log(LOG_PREFIX, "metadata:", metadata);
+	const metadata = getDeepWikiMetadata();
 	if (!metadata.generatedAt) {
 		setRepoLinkSuffix(title, repoInfo, "(time unavailable)");
 		return;
@@ -336,7 +337,6 @@ function setupObserver() {
 
 function setupDeepWikiObserver() {
 	let pending = false;
-	let lastUrl = window.location.href;
 
 	const scheduleUpdate = () => {
 		if (pending) {
@@ -349,12 +349,7 @@ function setupDeepWikiObserver() {
 		});
 	};
 
-	const observer = new MutationObserver(() => {
-		if (window.location.href !== lastUrl) {
-			lastUrl = window.location.href;
-		}
-		scheduleUpdate();
-	});
+	const observer = new MutationObserver(scheduleUpdate);
 
 	observer.observe(document.body, {
 		childList: true,
