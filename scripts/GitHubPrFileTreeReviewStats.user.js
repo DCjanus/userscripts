@@ -17,7 +17,6 @@ const STYLE_ID = "rgh-pr-file-tree-review-stats-style";
 const STATS_CLASS = "rgh-pr-file-tree-review-stats";
 const PATCHED_ATTR = "data-rgh-pr-file-tree-review-stats";
 const VIEWED_ATTR = "data-rgh-pr-file-viewed";
-const NETWORK_HOOKED = Symbol.for("GitHubPrFileTreeReviewStats.networkHooked");
 const HISTORY_HOOKED = Symbol.for("GitHubPrFileTreeReviewStats.historyHooked");
 const LOCATION_CHANGE_EVENT = "rgh-pr-file-tree-review-stats-location-change";
 
@@ -28,6 +27,17 @@ const FILE_HEADER_SELECTOR =
 const VIEWED_CONTROL_SELECTOR =
 	'button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox';
 const FILE_TREE_LINK_SELECTOR = 'a[href^="#diff-"]';
+const FILE_TREE_ROW_SELECTOR =
+	'li[class*="file-tree-row"], li.ActionListItem, a.ActionList-content';
+const RELEVANT_DESCENDANT_SELECTOR = [
+	FILE_SELECTOR,
+	FILE_HEADER_SELECTOR,
+	VIEWED_CONTROL_SELECTOR,
+	FILE_TREE_LINK_SELECTOR,
+].join(", ");
+const RELEVANT_CONTEXT_SELECTOR = [FILE_SELECTOR, FILE_TREE_ROW_SELECTOR].join(
+	", ",
+);
 
 let updateScheduled = false;
 let observer = null;
@@ -331,16 +341,6 @@ function scheduleUpdate() {
 	requestAnimationFrame(updateFileTree);
 }
 
-function schedulePostNetworkUpdate() {
-	if (!isPrFilesPage()) {
-		return;
-	}
-
-	requestAnimationFrame(() => {
-		requestAnimationFrame(scheduleUpdate);
-	});
-}
-
 function getFileFromControl(control) {
 	return control.closest(FILE_SELECTOR);
 }
@@ -378,33 +378,49 @@ function handleViewedChange(event) {
 	}
 }
 
-function installNetworkHooks() {
-	if (window[NETWORK_HOOKED]) {
-		return;
+function mutationAffectsFileTree(mutation) {
+	if (mutation.type === "attributes") {
+		return (
+			mutation.target instanceof Element &&
+			(mutation.target.matches(VIEWED_CONTROL_SELECTOR) ||
+				Boolean(mutation.target.closest(FILE_SELECTOR)))
+		);
 	}
 
-	Object.defineProperty(window, NETWORK_HOOKED, {
-		value: true,
-	});
-
-	const nativeFetch = window.fetch;
-	if (typeof nativeFetch === "function") {
-		window.fetch = async function fetchWithReviewStatsUpdate(...args) {
-			try {
-				return await nativeFetch.apply(this, args);
-			} finally {
-				schedulePostNetworkUpdate();
-			}
-		};
+	if (mutation.type === "characterData") {
+		return Boolean(
+			mutation.target.parentElement?.closest(FILE_HEADER_SELECTOR),
+		);
 	}
 
-	const nativeSend = XMLHttpRequest.prototype.send;
-	XMLHttpRequest.prototype.send = function sendWithReviewStatsUpdate(...args) {
-		this.addEventListener("loadend", schedulePostNetworkUpdate, {
-			once: true,
-		});
-		return nativeSend.apply(this, args);
-	};
+	if (
+		mutation.target instanceof Element &&
+		mutation.target.closest(RELEVANT_CONTEXT_SELECTOR)
+	) {
+		return true;
+	}
+
+	for (const node of mutation.addedNodes) {
+		if (
+			node instanceof Element &&
+			(node.matches(RELEVANT_DESCENDANT_SELECTOR) ||
+				Boolean(node.querySelector(RELEVANT_DESCENDANT_SELECTOR)))
+		) {
+			return true;
+		}
+	}
+
+	for (const node of mutation.removedNodes) {
+		if (
+			node instanceof Element &&
+			(node.matches(RELEVANT_DESCENDANT_SELECTOR) ||
+				Boolean(node.querySelector(RELEVANT_DESCENDANT_SELECTOR)))
+		) {
+			return true;
+		}
+	}
+
+	return false;
 }
 
 function setupLocationChangeEvent() {
@@ -435,10 +451,13 @@ function startPrFilesPage() {
 		return;
 	}
 
-	installNetworkHooks();
 	scheduleUpdate();
 
-	observer = new MutationObserver(scheduleUpdate);
+	observer = new MutationObserver((mutations) => {
+		if (mutations.some(mutationAffectsFileTree)) {
+			scheduleUpdate();
+		}
+	});
 	observer.observe(document.documentElement, {
 		childList: true,
 		characterData: true,
@@ -448,9 +467,7 @@ function startPrFilesPage() {
 			"aria-label",
 			"aria-pressed",
 			"checked",
-			"class",
 			"data-file-user-viewed",
-			"hidden",
 		],
 	});
 
