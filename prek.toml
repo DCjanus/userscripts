@@ -14,6 +14,21 @@ hooks = [
 repo = "local"
 
 [[repos.hooks]]
+id = "userscript-version"
+name = "userscript-version"
+language = "node"
+entry = "node tools/userscript-version.mjs"
+files = "^scripts/.*\\.user\\.js$"
+
+[[repos.hooks]]
+id = "userscript-version-tests"
+name = "userscript-version-tests"
+language = "node"
+entry = "node --test tests/userscript-version.test.mjs"
+pass_filenames = false
+files = "^(tools/userscript-version\\.mjs|tests/userscript-version\\.test\\.mjs)$"
+
+[[repos.hooks]]
 id = "biome"
 name = "biome"
 language = "node"
