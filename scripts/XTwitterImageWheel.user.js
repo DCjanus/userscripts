@@ -7,54 +7,104 @@
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @icon         https://abs.twimg.com/favicons/twitter.2.ico
-// @version      20260710
+// @version      20260711
 // @license      MIT
 // @grant        none
 // ==/UserScript==
 
 const SCRIPT_NAME = "XTwitterImageWheel";
-const COOLDOWN_MS = 250;
+const WHEEL_END_DELAY_MS = 120;
 const CAROUSEL_SELECTOR =
 	'div[role="dialog"] [aria-roledescription="carousel"]';
+const PREVIOUS_BUTTON_SELECTOR = '[data-testid="Carousel-NavLeft"]';
+const NEXT_BUTTON_SELECTOR = '[data-testid="Carousel-NavRight"]';
+const CLOSE_BUTTON_SELECTOR = '[data-testid="app-bar-close"]';
+const INTERACTIVE_SELECTOR =
+	"button, a, input, select, textarea, video, [contenteditable], [role=button]";
 
-let lastTs = 0;
+let wheelGestureActive = false;
+let wheelEndTimer;
 
-function isWheelOverCarousel(event) {
-	return (
-		event.target instanceof Element &&
-		Boolean(event.target.closest(CAROUSEL_SELECTOR))
-	);
+function getCarousel(event) {
+	if (!(event.target instanceof Element)) {
+		return null;
+	}
+
+	return event.target.closest(CAROUSEL_SELECTOR);
 }
 
-function dispatchArrow(key) {
-	const keyCode = key === "ArrowLeft" ? 37 : 39;
-	const event = new KeyboardEvent("keydown", {
-		key,
-		code: key,
-		keyCode,
-		which: keyCode,
-		bubbles: true,
-		cancelable: true,
-	});
-	document.dispatchEvent(event);
+function finishWheelGestureAfterIdle() {
+	clearTimeout(wheelEndTimer);
+	wheelEndTimer = setTimeout(() => {
+		wheelGestureActive = false;
+	}, WHEEL_END_DELAY_MS);
+}
+
+function getNavigationButton(carousel, deltaY) {
+	const dialog = carousel.closest('div[role="dialog"]');
+	const selector = deltaY < 0 ? PREVIOUS_BUTTON_SELECTOR : NEXT_BUTTON_SELECTOR;
+	const button = dialog?.querySelector(selector);
+
+	return button instanceof HTMLElement ? button : null;
+}
+
+function handleClick(event) {
+	if (event.button !== 0 || !(event.target instanceof Element)) {
+		return;
+	}
+
+	const carousel = event.target.closest(CAROUSEL_SELECTOR);
+	if (!carousel) {
+		return;
+	}
+
+	const clickedImage = Boolean(event.target.closest("img"));
+	if (!clickedImage && event.target.closest(INTERACTIVE_SELECTOR)) {
+		return;
+	}
+
+	const dialog = carousel.closest('div[role="dialog"]');
+	const closeButton = dialog?.querySelector(CLOSE_BUTTON_SELECTOR);
+	if (!(closeButton instanceof HTMLElement)) {
+		return;
+	}
+
+	event.preventDefault();
+	event.stopPropagation();
+	closeButton.click();
 }
 
 function handleWheel(event) {
-	if (!isWheelOverCarousel(event) || event.deltaY === 0) {
+	const carousel = getCarousel(event);
+	if (
+		!carousel ||
+		event.deltaY === 0 ||
+		event.ctrlKey ||
+		event.metaKey ||
+		event.altKey ||
+		event.shiftKey
+	) {
 		return;
 	}
 
-	const now = Date.now();
-	if (now - lastTs < COOLDOWN_MS) {
+	event.preventDefault();
+	event.stopPropagation();
+	finishWheelGestureAfterIdle();
+
+	if (wheelGestureActive) {
 		return;
 	}
-	lastTs = now;
+	wheelGestureActive = true;
 
-	dispatchArrow(event.deltaY < 0 ? "ArrowLeft" : "ArrowRight");
+	getNavigationButton(carousel, event.deltaY)?.click();
 }
 
 function setup() {
-	document.addEventListener("wheel", handleWheel, { passive: true });
+	document.addEventListener("click", handleClick, { capture: true });
+	document.addEventListener("wheel", handleWheel, {
+		capture: true,
+		passive: false,
+	});
 }
 
 try {
