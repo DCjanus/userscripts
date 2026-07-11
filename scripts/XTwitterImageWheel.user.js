@@ -7,7 +7,7 @@
 // @match        https://x.com/*
 // @match        https://twitter.com/*
 // @icon         https://abs.twimg.com/favicons/twitter.2.ico
-// @version      20260711.1
+// @version      20260711
 // @license      MIT
 // @grant        none
 // ==/UserScript==
