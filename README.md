@@ -19,8 +19,11 @@
 | [XTwitterImageWheel.user.js](scripts/XTwitterImageWheel.user.js)                   | X/Twitter 图片详情页滚轮翻页                    | 不发布到 GreasyFork                                       |
 | [MediaSpeedToggle.user.js](scripts/MediaSpeedToggle.user.js)                       | 全站视频 1x/3x 快捷切换，支持全局/站点/页面规则 | 不发布到 GreasyFork                                       |
 | [BiliBiliTweaks.user.js](scripts/BiliBiliTweaks.user.js)                           | B 站辅助脚本，自维护 fork                       | 不发布到 GreasyFork                                       |
+| [GoogleComRedirect.user.js](scripts/GoogleComRedirect.user.js)                     | Google 香港搜索自动经过 /ncr 转到 .com          | 不发布到 GreasyFork                                       |
 
 > `MediaSpeedToggle.user.js` 为 DCjanus 个人使用场景定制脚本，不追求通用性与可配置性。
+
+`GoogleComRedirect.user.js` 会在 Google 香港搜索页加载后经由 `/ncr` 转到 `.com`，保留原搜索 URL，并限制短时间内的重复跳转。若想让 Chrome 地址栏搜索一开始就请求 `.com`，还需在浏览器搜索引擎设置中使用 `https://www.google.com/search?q=%s`；搜索结果地区则在 Google 搜索设置中选择。
 
 MoviePlus Fork 自 [94leon/movie.plus](https://github.com/94leon/movie.plus)
 
