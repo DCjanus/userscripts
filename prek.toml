@@ -29,6 +29,14 @@ pass_filenames = false
 files = "^(tools/userscript-version\\.mjs|tests/userscript-version\\.test\\.mjs)$"
 
 [[repos.hooks]]
+id = "google-com-redirect-tests"
+name = "google-com-redirect-tests"
+language = "node"
+entry = "node --test tests/google-com-redirect.test.mjs"
+pass_filenames = false
+files = "^(scripts/GoogleComRedirect\\.user\\.js|tests/google-com-redirect\\.test\\.mjs)$"
+
+[[repos.hooks]]
 id = "biome"
 name = "biome"
 language = "node"
