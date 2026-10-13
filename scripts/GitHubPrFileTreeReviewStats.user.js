@@ -6,7 +6,7 @@
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20260710
+// @version      20261013
 // @license      MIT
 // @grant        none
 // @run-at       document-start
@@ -21,11 +21,11 @@ const HISTORY_HOOKED = Symbol.for("GitHubPrFileTreeReviewStats.historyHooked");
 const LOCATION_CHANGE_EVENT = "rgh-pr-file-tree-review-stats-location-change";
 
 const FILE_SELECTOR =
-	'[id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]';
+	'[id^="diff-"][role="region"], [id^="diff-"].js-file, [id^="diff-"][class*="Diff-module__diffTargetable"]';
 const FILE_HEADER_SELECTOR =
-	'.file-header, [class*="DiffHeader"], [class*="FileHeader"]';
+	'[data-diff-header-wrapper], .file-header, [class*="DiffHeader"], [class*="FileHeader"]';
 const VIEWED_CONTROL_SELECTOR =
-	'button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox';
+	'button[aria-pressed][aria-label="Viewed" i], button[aria-pressed][aria-label="Not Viewed" i], button[class*="MarkAsViewedButton"], input.js-reviewed-checkbox';
 const FILE_TREE_LINK_SELECTOR = 'a[href^="#diff-"]';
 const FILE_TREE_ROW_SELECTOR =
 	'li[class*="file-tree-row"], li.ActionListItem, a.ActionList-content';
@@ -163,9 +163,7 @@ function getViewedState(file) {
 		return input.checked;
 	}
 
-	const button = file.querySelector(
-		'button[class*="MarkAsViewedButton"], button[aria-pressed][aria-label*="Viewed"], button[aria-pressed][aria-label*="viewed"]',
-	);
+	const button = file.querySelector(VIEWED_CONTROL_SELECTOR);
 	if (!button) {
 		return null;
 	}
