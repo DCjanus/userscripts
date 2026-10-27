@@ -2,11 +2,11 @@
 // @name         GitHubPrFileTreeReviewStats
 // @name:zh-CN   GitHub PR 文件树审阅状态
 // @namespace    https://github.com/DCjanus/userscripts
-// @description  在 GitHub PR 文件树中显示每文件增删行数，并用字重区分 Viewed 状态
+// @description  在 GitHub PR 文件树中显示增删行数、Viewed 状态及已删除的文件和目录
 // @author       DCjanus
 // @match        https://github.com/*
 // @icon         https://github.com/favicon.ico
-// @version      20261013
+// @version      20261027
 // @license      MIT
 // @grant        none
 // @run-at       document-start
@@ -17,6 +17,9 @@ const STYLE_ID = "rgh-pr-file-tree-review-stats-style";
 const STATS_CLASS = "rgh-pr-file-tree-review-stats";
 const PATCHED_ATTR = "data-rgh-pr-file-tree-review-stats";
 const VIEWED_ATTR = "data-rgh-pr-file-viewed";
+const DELETED_ATTR = "data-rgh-pr-directory-deleted";
+const DIRECTORY_SELECTOR =
+	'[role="tree"][aria-label="File Tree"] li[role="treeitem"][aria-expanded]';
 const HISTORY_HOOKED = Symbol.for("GitHubPrFileTreeReviewStats.historyHooked");
 const LOCATION_CHANGE_EVENT = "rgh-pr-file-tree-review-stats-location-change";
 
@@ -34,6 +37,7 @@ const RELEVANT_DESCENDANT_SELECTOR = [
 	FILE_HEADER_SELECTOR,
 	VIEWED_CONTROL_SELECTOR,
 	FILE_TREE_LINK_SELECTOR,
+	DIRECTORY_SELECTOR,
 ].join(", ");
 const RELEVANT_CONTEXT_SELECTOR = [FILE_SELECTOR, FILE_TREE_ROW_SELECTOR].join(
 	", ",
@@ -41,6 +45,7 @@ const RELEVANT_CONTEXT_SELECTOR = [FILE_SELECTOR, FILE_TREE_ROW_SELECTOR].join(
 
 let updateScheduled = false;
 let observer = null;
+const directoryChecks = new Map();
 
 function isPrFilesPage() {
 	return /^\/[^/]+\/[^/]+\/pull\/\d+\/(files|changes)/.test(location.pathname);
@@ -54,6 +59,14 @@ function ensureStyle() {
 	const style = document.createElement("style");
 	style.id = STYLE_ID;
 	style.textContent = `
+        li[class*="file-tree-row"]:has(.octicon-file-removed) a[href^="#diff-"] {
+            text-decoration: line-through;
+        }
+
+        li[${DELETED_ATTR}="true"] > div [class*="TreeViewItemContentText"] {
+            text-decoration: line-through;
+        }
+
         li[${VIEWED_ATTR}="false"] a[href^="#diff-"],
         a[${VIEWED_ATTR}="false"][href^="#diff-"] {
             font-weight: 600;
@@ -86,6 +99,49 @@ function ensureStyle() {
         }
     `;
 	document.head.appendChild(style);
+}
+
+function getHeadSha() {
+	for (const script of document.querySelectorAll(
+		'script[type="application/json"]',
+	)) {
+		const match = script.textContent.match(/"headSha":"([a-f0-9]{40})"/i);
+		if (match) return match[1];
+	}
+	return null;
+}
+
+function checkDirectory(url) {
+	if (!directoryChecks.has(url)) {
+		directoryChecks.set(
+			url,
+			fetch(url, { method: "HEAD" })
+				.then((response) => response.status)
+				.catch(() => null),
+		);
+	}
+	return directoryChecks.get(url);
+}
+
+async function updateDirectories() {
+	const sha = getHeadSha();
+	const match = location.pathname.match(/^\/([^/]+)\/([^/]+)\/pull\/\d+\//);
+	if (!sha || !match) return;
+
+	const root = `/${match[1]}/${match[2]}/tree/${sha}`;
+	if ((await checkDirectory(root)) !== 200) return;
+	for (const directory of document.querySelectorAll(DIRECTORY_SELECTOR)) {
+		const path = directory.id.split("/").map(encodeURIComponent).join("/");
+		checkDirectory(`${root}/${path}`).then((status) => {
+			if (directory.isConnected && getHeadSha() === sha) {
+				setAttributeValue(
+					directory,
+					DELETED_ATTR,
+					status === 404 ? true : null,
+				);
+			}
+		});
+	}
 }
 
 function parseCount(text, word) {
@@ -324,6 +380,7 @@ function updateFileTree() {
 	}
 
 	ensureStyle();
+	updateDirectories();
 	const rowsByHash = collectFileTreeRows();
 	for (const file of document.querySelectorAll(FILE_SELECTOR)) {
 		updateFile(file, rowsByHash);
